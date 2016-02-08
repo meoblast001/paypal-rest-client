@@ -1,6 +1,6 @@
 name: paypal-client
 version: 0.1.0
-synopsis: A client to connect to PayPal
+synopsis: A client to connect to PayPal's REST API (v1)
 license: MIT
 license-file: LICENSE
 author: Braden Walters
