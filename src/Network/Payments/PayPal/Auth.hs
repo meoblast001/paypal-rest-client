@@ -53,7 +53,7 @@ instance FromJSON AccessToken where
     obj .: "app_id" <*>
     obj .: "expires_in"
 
--- |Use a PayPal environment
+-- |Use a PayPal environment and login credentials to get an OAuth access token.
 fetchAccessToken :: EnvironmentUrl -> ClientID -> Secret ->
                     IO (Maybe AccessToken)
 fetchAccessToken (EnvironmentUrl url) username password = do
