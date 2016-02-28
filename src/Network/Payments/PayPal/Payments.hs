@@ -24,12 +24,22 @@ module Network.Payments.PayPal.Payments
 , ItemList(..)
 , Transaction(..)
 , CreateRequest(..)
+, createPayment
 ) where
 
+import Control.Lens hiding ((.=))
 import Data.Aeson.Encode
 import Data.Aeson.Types
+import qualified Data.ByteString.Char8 as BS8
+import Data.ByteString.Lazy
 import Data.CountryCodes
 import Data.Maybe
+import qualified Network.HTTP.Client as HTTP
+import Network.Payments.PayPal
+import Network.Payments.PayPal.Auth
+import Network.Payments.PayPal.Environment
+import Network.Wreq
+import qualified Network.Wreq.Types as WTypes
 
 type URL = String
 
@@ -236,3 +246,22 @@ instance ToJSON CreateRequest where
     object ["intent" .= createReqIntent req,
             "payer" .= createReqPayer req,
             "transactions" .= createReqTransactions req]
+
+-- TODO: Define the actual response as a parsed type.
+type CreateResponse = ByteString
+
+createPayment :: PayPalSession -> CreateRequest -> IO (Maybe CreateResponse)
+createPayment session request = do
+  let (EnvironmentUrl baseUrl) = ppSessionEnvironment session
+      fullUrl = baseUrl ++ "/v1/payments/payment"
+      accToken = aToken $ ppAccessToken session
+      options = defaults &
+                header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
+      contentType = "application/json"
+      content = encode request
+      payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
+  response <- postWith options fullUrl payload
+  if response ^. responseStatus . statusCode == 200 then
+    return $ Just (response ^. responseBody)
+  else
+    return Nothing
