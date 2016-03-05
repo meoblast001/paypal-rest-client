@@ -144,27 +144,11 @@ instance ToJSON ShippingAddress where
 data Payer = Payer
   { payerFundingInstruments :: [FundingInstrument]
   , payerEmail :: String
-  , payerSalutation :: String
-  , payerFirstName :: String
-  , payerMiddleName :: String
-  , payerLastName :: String
-  , payerSuffix :: String
-  , payerPhone :: String
-  , payerCountryCode :: CountryCode
-  , payerShippingAddress :: ShippingAddress
   } deriving (Show)
 
 instance ToJSON Payer where
   toJSON payer =
-    let payerInfo = object ["email" .= payerEmail payer,
-                            "salutation" .= payerSalutation payer,
-                            "first_name" .= payerSalutation payer,
-                            "middle_name" .= payerMiddleName payer,
-                            "last_name" .= payerLastName payer,
-                            "suffix" .= payerSuffix payer,
-                            "phone" .= payerPhone payer,
-                            "country_code" .= (toText $ payerCountryCode payer),
-                            "shipping_address" .= payerShippingAddress payer]
+    let payerInfo = object ["email" .= payerEmail payer]
     -- TODO: Support something other than credit card.
     in object ["payment_method" .= ("credit_card" :: String),
                "funding_instruments" .= payerFundingInstruments payer,
