@@ -17,6 +17,7 @@ module Network.Payments.PayPal.Payments
 , FundingInstrument(..)
 , ShippingAddressType(..)
 , ShippingAddress(..)
+, PayerInfo(..)
 , Payer(..)
 , Details(..)
 , Amount(..)
@@ -27,8 +28,10 @@ module Network.Payments.PayPal.Payments
 , createPayment
 ) where
 
+import Control.Applicative
 import Control.Lens hiding ((.=))
-import Data.Aeson.Encode
+import Control.Monad
+import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.ByteString.Char8 as BS8
 import Data.ByteString.Lazy
@@ -50,6 +53,12 @@ instance ToJSON Intent where
   toJSON AuthoriseIntent = "authorize"
   toJSON OrderIntent = "order"
 
+instance FromJSON Intent where
+  parseJSON (String "sale") = return SaleIntent
+  parseJSON (String "authorize") = return AuthoriseIntent
+  parseJSON (String "order") = return OrderIntent
+  parseJSON _ = mzero
+
 data CreditCardType = VisaCC | MasterCardCC | DiscoverCC | AMEXCC
   deriving (Show)
 
@@ -58,6 +67,13 @@ instance ToJSON CreditCardType where
   toJSON MasterCardCC = "mastercard"
   toJSON DiscoverCC = "discover"
   toJSON AMEXCC = "amex"
+
+instance FromJSON CreditCardType where
+  parseJSON (String "visa") = return VisaCC
+  parseJSON (String "mastercard") = return MasterCardCC
+  parseJSON (String "discover") = return DiscoverCC
+  parseJSON (String "amex") = return AMEXCC
+  parseJSON _ = mzero
 
 data Address = Address
   { addressLine1 :: String
@@ -78,6 +94,18 @@ instance ToJSON Address where
             maybeToList (fmap ("line2" .=) $ addressLine2 addr) ++
             maybeToList (fmap ("postal_code" .=) $ addressPostalCode addr) ++
             maybeToList (fmap ("state" .=) $ addressState addr))
+
+instance FromJSON Address where
+  parseJSON (Object obj) =
+    Address <$>
+    obj .: "line1" <*>
+    obj .:? "line2" <*>
+    obj .: "city" <*>
+    (fmap fromMText (obj .: "country_code") >>= maybe mzero return) <*>
+    obj .:? "postal_code" <*>
+    obj .:? "state" <*>
+    obj .: "phone"
+  parseJSON _ = mzero
 
 data CreditCard = CreditCard
   { creditCardNumber :: String
@@ -102,12 +130,29 @@ instance ToJSON CreditCard where
             maybeToList (fmap ("billing_address" .=) $
                               creditCardBillingAddress cc))
 
+instance FromJSON CreditCard where
+  parseJSON (Object obj) =
+    CreditCard <$>
+    obj .: "number" <*>
+    obj .: "type" <*>
+    obj .: "expire_month" <*>
+    obj .: "expire_year" <*>
+    obj .:? "ccv2" <*>
+    obj .:? "first_name" <*>
+    obj .:? "last_name" <*>
+    obj .:? "billing_address"
+  parseJSON _ = mzero
+
 data FundingInstrument = FundingInstrument
   { fundInstCreditCard :: CreditCard
   } deriving (Show)
 
 instance ToJSON FundingInstrument where
   toJSON fundInstr = object ["credit_card" .= fundInstCreditCard fundInstr]
+
+instance FromJSON FundingInstrument where
+  parseJSON (Object obj) = FundingInstrument <$> obj .: "credit_card"
+  parseJSON _ = mzero
 
 data ShippingAddressType =
   ShipAddrResidential | ShipAddrBusiness | ShipAddrMailbox deriving (Show)
@@ -141,18 +186,35 @@ instance ToJSON ShippingAddress where
             maybeToList (fmap ("postal_code" .=) $ shipAddrPostalCode addr) ++
             maybeToList (fmap ("state" .=) $ shipAddrState addr))
 
+data PayerInfo = PayerInfo
+  { payerInfoEmail :: String
+  } deriving (Show)
+
+instance ToJSON PayerInfo where
+  toJSON info = object ["email" .= payerInfoEmail info]
+
+instance FromJSON PayerInfo where
+  parseJSON (Object obj) = PayerInfo <$> obj .: "email"
+  parseJSON _ = mzero
+
 data Payer = Payer
   { payerFundingInstruments :: [FundingInstrument]
-  , payerEmail :: String
+  , payerInfo :: PayerInfo
   } deriving (Show)
 
 instance ToJSON Payer where
   toJSON payer =
-    let payerInfo = object ["email" .= payerEmail payer]
     -- TODO: Support something other than credit card.
-    in object ["payment_method" .= ("credit_card" :: String),
-               "funding_instruments" .= payerFundingInstruments payer,
-               "payer_info" .= payerInfo]
+    object ["payment_method" .= ("credit_card" :: String),
+            "funding_instruments" .= payerFundingInstruments payer,
+            "payer_info" .= payerInfo payer]
+
+instance FromJSON Payer where
+  parseJSON (Object obj) =
+    Payer <$>
+    obj .: "funding_instruments" <*>
+    obj .: "payer_info"
+  parseJSON _ = mzero
 
 data Details = Details
   { detailsShipping :: String
@@ -231,8 +293,17 @@ instance ToJSON CreateRequest where
             "payer" .= createReqPayer req,
             "transactions" .= createReqTransactions req]
 
--- TODO: Define the actual response as a parsed type.
-type CreateResponse = ByteString
+data CreateResponse = CreateResponse
+  { createResIntent :: Intent
+  , createResPayer :: Payer
+  } deriving (Show)
+
+instance FromJSON CreateResponse where
+  parseJSON (Object obj) =
+    CreateResponse <$>
+    obj .: "intent" <*>
+    obj .: "payer"
+  parseJSON _ = mzero
 
 createPayment :: PayPalSession -> CreateRequest -> IO (Maybe CreateResponse)
 createPayment session request = do
@@ -245,7 +316,4 @@ createPayment session request = do
       content = encode request
       payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
   response <- postWith options fullUrl payload
-  if response ^. responseStatus . statusCode == 200 then
-    return $ Just (response ^. responseBody)
-  else
-    return Nothing
+  return $ decode (response ^. responseBody)
