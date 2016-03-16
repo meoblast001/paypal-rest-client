@@ -135,8 +135,8 @@ instance FromJSON CreditCard where
     CreditCard <$>
     obj .: "number" <*>
     obj .: "type" <*>
-    obj .: "expire_month" <*>
-    obj .: "expire_year" <*>
+    fmap read (obj .: "expire_month") <*>
+    fmap read (obj .: "expire_year") <*>
     obj .:? "ccv2" <*>
     obj .:? "first_name" <*>
     obj .:? "last_name" <*>
@@ -199,21 +199,21 @@ instance FromJSON PayerInfo where
 
 data Payer = Payer
   { payerFundingInstruments :: [FundingInstrument]
-  , payerInfo :: PayerInfo
+  , payerInfo :: Maybe PayerInfo
   } deriving (Show)
 
 instance ToJSON Payer where
   toJSON payer =
     -- TODO: Support something other than credit card.
-    object ["payment_method" .= ("credit_card" :: String),
-            "funding_instruments" .= payerFundingInstruments payer,
-            "payer_info" .= payerInfo payer]
+    object (["payment_method" .= ("credit_card" :: String),
+             "funding_instruments" .= payerFundingInstruments payer] ++
+            maybeToList (fmap ("payer_info" .=) $ payerInfo payer))
 
 instance FromJSON Payer where
   parseJSON (Object obj) =
     Payer <$>
     obj .: "funding_instruments" <*>
-    obj .: "payer_info"
+    obj .:? "payer_info"
   parseJSON _ = mzero
 
 data Details = Details
