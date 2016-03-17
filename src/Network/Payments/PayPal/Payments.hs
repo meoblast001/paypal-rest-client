@@ -33,7 +33,6 @@ import Control.Lens hiding ((.=))
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types
-import qualified Data.ByteString.Char8 as BS8
 import Data.ByteString.Lazy
 import Data.CountryCodes
 import Data.Maybe
@@ -305,15 +304,10 @@ instance FromJSON CreateResponse where
     obj .: "payer"
   parseJSON _ = mzero
 
-createPayment :: PayPalSession -> CreateRequest -> IO (Maybe CreateResponse)
-createPayment session request = do
-  let (EnvironmentUrl baseUrl) = ppSessionEnvironment session
-      fullUrl = baseUrl ++ "/v1/payments/payment"
-      accToken = aToken $ ppAccessToken session
-      options = defaults &
-                header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
+createPayment :: CreateRequest -> PayPalOperations CreateResponse
+createPayment request =
+  let url = "/v1/payments/payment"
       contentType = "application/json"
       content = encode request
       payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
-  response <- postWith options fullUrl payload
-  return $ decode (response ^. responseBody)
+  in PayPalOperation ReqTypePost url defaults payload
