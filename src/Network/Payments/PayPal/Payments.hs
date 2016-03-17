@@ -83,11 +83,11 @@ instance ToJSON Address where
   toJSON addr =
     object (["line1" .= addressLine1 addr,
              "city" .= addressCity addr,
-             "country_code" .= (toText $ addressCountryCode addr),
+             "country_code" .= toText (addressCountryCode addr),
              "phone" .= addressPhone addr] ++
-            maybeToList (fmap ("line2" .=) $ addressLine2 addr) ++
-            maybeToList (fmap ("postal_code" .=) $ addressPostalCode addr) ++
-            maybeToList (fmap ("state" .=) $ addressState addr))
+            maybeToList (("line2" .=) <$> addressLine2 addr) ++
+            maybeToList (("postal_code" .=) <$> addressPostalCode addr) ++
+            maybeToList (("state" .=) <$> addressState addr))
 
 instance FromJSON Address where
   parseJSON (Object obj) =
@@ -116,13 +116,13 @@ instance ToJSON CreditCard where
   toJSON cc =
     object (["number" .= creditCardNumber cc,
              "type" .= creditCardType cc,
-             "expire_month" .= (show $ creditCardExpireMonth cc),
-             "expire_year" .= (show $ creditCardExpireYear cc)] ++
-            maybeToList (fmap ("cvv2" .=) $ creditCardCVV2 cc) ++
-            maybeToList (fmap ("first_name" .=) $ creditCardFirstName cc) ++
-            maybeToList (fmap ("last_name" .=) $ creditCardLastName cc) ++
-            maybeToList (fmap ("billing_address" .=) $
-                              creditCardBillingAddress cc))
+             "expire_month" .= show (creditCardExpireMonth cc),
+             "expire_year" .= show (creditCardExpireYear cc)] ++
+            maybeToList (("cvv2" .=) <$> creditCardCVV2 cc) ++
+            maybeToList (("first_name" .=) <$> creditCardFirstName cc) ++
+            maybeToList (("last_name" .=) <$> creditCardLastName cc) ++
+            maybeToList (("billing_address" .=) <$>
+                         creditCardBillingAddress cc))
 
 instance FromJSON CreditCard where
   parseJSON (Object obj) =
@@ -174,11 +174,11 @@ instance ToJSON ShippingAddress where
              "type" .= shipAddrType addr,
              "line1" .= shipAddrLine1 addr,
              "city" .= shipAddrCity addr,
-             "country_code" .= (toText $ shipAddrCountryCode addr),
+             "country_code" .= toText (shipAddrCountryCode addr),
              "phone" .= shipAddrPhone addr] ++
-            maybeToList (fmap ("line2" .=) $ shipAddrLine2 addr) ++
-            maybeToList (fmap ("postal_code" .=) $ shipAddrPostalCode addr) ++
-            maybeToList (fmap ("state" .=) $ shipAddrState addr))
+            maybeToList (("line2" .=) <$> shipAddrLine2 addr) ++
+            maybeToList (("postal_code" .=) <$> shipAddrPostalCode addr) ++
+            maybeToList (("state" .=) <$> shipAddrState addr))
 
 data PayerInfo = PayerInfo
   { payerInfoEmail :: String
@@ -201,7 +201,7 @@ instance ToJSON Payer where
     -- TODO: Support something other than credit card.
     object (["payment_method" .= ("credit_card" :: String),
              "funding_instruments" .= payerFundingInstruments payer] ++
-            maybeToList (fmap ("payer_info" .=) $ payerInfo payer))
+            maybeToList (("payer_info" .=) <$> payerInfo payer))
 
 instance FromJSON Payer where
   parseJSON (Object obj) =
@@ -260,8 +260,8 @@ data ItemList = ItemList
 instance ToJSON ItemList where
   toJSON list =
     object (["items" .= itemListItems list] ++
-            maybeToList (fmap ("shipping_address" .=) $
-                              itemListShippingAddress list))
+            maybeToList (("shipping_address" .=) <$>
+                         itemListShippingAddress list))
 
 data Transaction = Transaction
   { transactAmount :: Amount
