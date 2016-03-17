@@ -16,8 +16,8 @@ module Network.Payments.PayPal.Auth
 , fetchAccessToken
 ) where
 
-import Control.Applicative
 import Control.Lens
+import Control.Monad
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BS8
@@ -52,6 +52,7 @@ instance FromJSON AccessToken where
     obj .: "token_type" <*>
     obj .: "app_id" <*>
     obj .: "expires_in"
+  parseJSON _ = mzero
 
 -- |Use a PayPal environment and login credentials to get an OAuth access token.
 fetchAccessToken :: EnvironmentUrl -> ClientID -> Secret ->
@@ -60,12 +61,12 @@ fetchAccessToken (EnvironmentUrl url) username password = do
   let usernameBS = BS8.pack username
       passwordBS = BS8.pack password
       fullUrl = url ++ "/v1/oauth2/token"
-      options = defaults & header "Accept" .~ ["application/json"] &
-                           auth ?~ basicAuth usernameBS passwordBS
+      options' = defaults & header "Accept" .~ ["application/json"] &
+                            auth ?~ basicAuth usernameBS passwordBS
       contentType = "application/x-www-form-urlencoded"
       content = "grant_type=client_credentials"
       payload = WTypes.Raw contentType $ HTTP.RequestBodyBS content
-  response <- postWith options fullUrl payload
+  response <- postWith options' fullUrl payload
   if response ^. responseStatus . statusCode == 200 then
     let body = response ^. responseBody
         accessToken = decode body

@@ -19,7 +19,6 @@ module Network.Payments.PayPal
 import Control.Lens
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS8
-import Data.Functor
 import Network.Payments.PayPal.Auth
 import Network.Payments.PayPal.Environment
 import Network.Wreq
@@ -62,16 +61,16 @@ execPayPal envUrl username password operations = do
     execOpers :: EnvironmentUrl -> AccessToken -> PayPalOperations a ->
                  IO (Maybe a)
     execOpers _ _ (PPOPure a) = return $ Just a
-    execOpers envUrl accessToken (PPOBind m f) = do
-      leftResult <- execOpers envUrl accessToken m
-      maybe (return Nothing) (\res -> execOpers envUrl accessToken $ f res)
+    execOpers envUrl' accessToken (PPOBind m f) = do
+      leftResult <- execOpers envUrl' accessToken m
+      maybe (return Nothing) (\res -> execOpers envUrl' accessToken $ f res)
             leftResult
     execOpers (EnvironmentUrl baseUrl) accessToken
               (PayPalOperation reqType url preOptions payload) = do
       let accToken = aToken accessToken
-          options = preOptions &
-                    header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
+          opts = preOptions &
+                  header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
       response <- case reqType of
-        ReqTypeGet -> getWith options (baseUrl ++ url)
-        ReqTypePost -> postWith options (baseUrl ++ url) payload
+        ReqTypeGet -> getWith opts (baseUrl ++ url)
+        ReqTypePost -> postWith opts (baseUrl ++ url) payload
       return $ decode (response ^. responseBody)

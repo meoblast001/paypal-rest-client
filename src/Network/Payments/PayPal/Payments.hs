@@ -25,21 +25,16 @@ module Network.Payments.PayPal.Payments
 , ItemList(..)
 , Transaction(..)
 , CreateRequest(..)
+, CreateResponse(..)
 , createPayment
 ) where
 
-import Control.Applicative
-import Control.Lens hiding ((.=))
 import Control.Monad
 import Data.Aeson
-import Data.Aeson.Types
-import Data.ByteString.Lazy
 import Data.CountryCodes
 import Data.Maybe
 import qualified Network.HTTP.Client as HTTP
 import Network.Payments.PayPal
-import Network.Payments.PayPal.Auth
-import Network.Payments.PayPal.Environment
 import Network.Wreq
 import qualified Network.Wreq.Types as WTypes
 
