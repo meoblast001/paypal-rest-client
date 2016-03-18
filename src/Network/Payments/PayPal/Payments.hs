@@ -25,6 +25,7 @@ module Network.Payments.PayPal.Payments
 , ItemList(..)
 , Transaction(..)
 , CreateRequest(..)
+, HateoasLink(..)
 , CreateResponse(..)
 , createPayment
 ) where
@@ -68,6 +69,18 @@ instance FromJSON CreditCardType where
   parseJSON (String "discover") = return DiscoverCC
   parseJSON (String "amex") = return AMEXCC
   parseJSON _ = mzero
+
+data PaymentState = PayStateCreated | PayStateApproved | PayStateFailed |
+                    PayStateCancelled | PayStateExpired | PayStatePending
+                    deriving (Show)
+
+instance FromJSON PaymentState where
+  parseJSON (String "created") = return PayStateCreated
+  parseJSON (String "approved") = return PayStateApproved
+  parseJSON (String "failed") = return PayStateFailed
+  parseJSON (String "canceled") = return PayStateCancelled
+  parseJSON (String "expired") = return PayStateExpired
+  parseJSON (String "pending") = return PayStatePending
 
 data Address = Address
   { addressLine1 :: String
@@ -287,16 +300,38 @@ instance ToJSON CreateRequest where
             "payer" .= createReqPayer req,
             "transactions" .= createReqTransactions req]
 
+data HateoasLink = HateoasLink
+  { hateoasHref :: URL
+  , hateoasRel :: String
+  , hateoasMethod :: HttpMethod
+  } deriving (Show)
+
+instance FromJSON HateoasLink where
+  parseJSON (Object obj) =
+    HateoasLink <$>
+    obj .: "href" <*>
+    obj .: "rel" <*>
+    ((obj .: "method") >>= parseHttpMethod)
+    where
+      parseHttpMethod (String "GET") = return HttpGet
+      parseHttpMethod (String "POST") = return HttpPost
+      parseHttpMethod _ = mzero
+  parseJSON _ = mzero
+
 data CreateResponse = CreateResponse
   { createResIntent :: Intent
   , createResPayer :: Payer
+  , createResPayState :: PaymentState
+  , createResHateoasLinks :: [HateoasLink]
   } deriving (Show)
 
 instance FromJSON CreateResponse where
   parseJSON (Object obj) =
     CreateResponse <$>
     obj .: "intent" <*>
-    obj .: "payer"
+    obj .: "payer" <*>
+    obj .: "state" <*>
+    obj .: "links"
   parseJSON _ = mzero
 
 createPayment :: CreateRequest -> PayPalOperations CreateResponse
@@ -305,4 +340,4 @@ createPayment request =
       contentType = "application/json"
       content = encode request
       payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
-  in PayPalOperation ReqTypePost url defaults payload
+  in PayPalOperation HttpPost url defaults payload

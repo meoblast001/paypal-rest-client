@@ -11,7 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Payments.PayPal
-( RequestType(..)
+( HttpMethod(..)
 , PayPalOperations(..)
 , execPayPal
 ) where
@@ -23,8 +23,8 @@ import Network.Payments.PayPal.Auth
 import Network.Payments.PayPal.Environment
 import Network.Wreq
 
--- |Type of request (GET/POST).
-data RequestType = ReqTypeGet | ReqTypePost deriving (Show)
+-- |HTTP method (GET/POST).
+data HttpMethod = HttpGet | HttpPost deriving (Show)
 
 -- |A monad composing multiple PayPal operations which are to be performed.
 -- The result can be executed using the execPayPal function.
@@ -33,7 +33,7 @@ data PayPalOperations :: * -> * where
   PPOBind :: PayPalOperations a -> (a -> PayPalOperations b) ->
              PayPalOperations b
   PayPalOperation :: FromJSON a =>
-                     { ppoReqType :: RequestType
+                     { ppoMethod :: HttpMethod
                      , ppoUrl :: String
                      , ppoOptions :: Options
                      , ppoPayload :: Payload
@@ -66,11 +66,11 @@ execPayPal envUrl username password operations = do
       maybe (return Nothing) (\res -> execOpers envUrl' accessToken $ f res)
             leftResult
     execOpers (EnvironmentUrl baseUrl) accessToken
-              (PayPalOperation reqType url preOptions payload) = do
+              (PayPalOperation method url preOptions payload) = do
       let accToken = aToken accessToken
           opts = preOptions &
                   header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
-      response <- case reqType of
-        ReqTypeGet -> getWith opts (baseUrl ++ url)
-        ReqTypePost -> postWith opts (baseUrl ++ url) payload
+      response <- case method of
+        HttpGet -> getWith opts (baseUrl ++ url)
+        HttpPost -> postWith opts (baseUrl ++ url) payload
       return $ decode (response ^. responseBody)
