@@ -49,28 +49,32 @@ instance Applicative PayPalOperations where
 instance Monad PayPalOperations where
   m >>= f = PPOBind m f
 
+data PayPalError = NoAccessToken | ResponseParseError String deriving (Show)
+
 -- |Authenticate with PayPal and then interact with the service.
 execPayPal :: FromJSON a => EnvironmentUrl -> ClientID -> Secret ->
-              PayPalOperations a -> IO (Maybe a)
+              PayPalOperations a -> IO (Either PayPalError a)
 execPayPal envUrl username password operations = do
   mayAccessToken <- fetchAccessToken envUrl username password
   case mayAccessToken of
     Just accessToken -> execOpers envUrl accessToken operations
-    Nothing -> return Nothing
-  where
-    execOpers :: EnvironmentUrl -> AccessToken -> PayPalOperations a ->
-                 IO (Maybe a)
-    execOpers _ _ (PPOPure a) = return $ Just a
-    execOpers envUrl' accessToken (PPOBind m f) = do
-      leftResult <- execOpers envUrl' accessToken m
-      maybe (return Nothing) (\res -> execOpers envUrl' accessToken $ f res)
-            leftResult
-    execOpers (EnvironmentUrl baseUrl) accessToken
-              (PayPalOperation method url preOptions payload) = do
-      let accToken = aToken accessToken
-          opts = preOptions &
-                  header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
-      response <- case method of
-        HttpGet -> getWith opts (baseUrl ++ url)
-        HttpPost -> postWith opts (baseUrl ++ url) payload
-      return $ decode (response ^. responseBody)
+    Nothing -> return $ Left NoAccessToken
+
+execOpers :: EnvironmentUrl -> AccessToken -> PayPalOperations a ->
+             IO (Either PayPalError a)
+execOpers _ _ (PPOPure a) = return $ Right a
+execOpers envUrl' accessToken (PPOBind m f) = do
+  treeLeftResult <- execOpers envUrl' accessToken m
+  either (return . Left) (\res -> execOpers envUrl' accessToken $ f res)
+         treeLeftResult
+execOpers (EnvironmentUrl baseUrl) accessToken
+          (PayPalOperation method url preOptions payload) = do
+  let accToken = aToken accessToken
+      opts = preOptions &
+             header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
+  response <- case method of
+    HttpGet -> getWith opts (baseUrl ++ url)
+    HttpPost -> postWith opts (baseUrl ++ url) payload
+  case eitherDecode (response ^. responseBody) of
+    Left errMsg -> return $ Left $ ResponseParseError errMsg
+    Right result -> return $ Right result
