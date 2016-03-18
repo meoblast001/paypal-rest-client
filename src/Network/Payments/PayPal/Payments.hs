@@ -36,6 +36,7 @@ import Data.CountryCodes
 import Data.Maybe
 import qualified Network.HTTP.Client as HTTP
 import Network.Payments.PayPal
+import Network.Payments.PayPal.Hateoas
 import Network.Wreq
 import qualified Network.Wreq.Types as WTypes
 
@@ -81,6 +82,7 @@ instance FromJSON PaymentState where
   parseJSON (String "canceled") = return PayStateCancelled
   parseJSON (String "expired") = return PayStateExpired
   parseJSON (String "pending") = return PayStatePending
+  parseJSON _ = mzero
 
 data Address = Address
   { addressLine1 :: String
@@ -299,24 +301,6 @@ instance ToJSON CreateRequest where
     object ["intent" .= createReqIntent req,
             "payer" .= createReqPayer req,
             "transactions" .= createReqTransactions req]
-
-data HateoasLink = HateoasLink
-  { hateoasHref :: URL
-  , hateoasRel :: String
-  , hateoasMethod :: HttpMethod
-  } deriving (Show)
-
-instance FromJSON HateoasLink where
-  parseJSON (Object obj) =
-    HateoasLink <$>
-    obj .: "href" <*>
-    obj .: "rel" <*>
-    ((obj .: "method") >>= parseHttpMethod)
-    where
-      parseHttpMethod (String "GET") = return HttpGet
-      parseHttpMethod (String "POST") = return HttpPost
-      parseHttpMethod _ = mzero
-  parseJSON _ = mzero
 
 data CreateResponse = CreateResponse
   { createResIntent :: Intent
