@@ -171,6 +171,12 @@ instance ToJSON ShippingAddressType where
   toJSON ShipAddrBusiness = "business"
   toJSON ShipAddrMailbox = "mailbox"
 
+instance FromJSON ShippingAddressType where
+  parseJSON (String "residential") = return ShipAddrResidential
+  parseJSON (String "business") = return ShipAddrBusiness
+  parseJSON (String "mailbox") = return ShipAddrMailbox
+  parseJSON _ = mzero
+
 data ShippingAddress = ShippingAddress
   { shipAddrRecipientName :: String
   , shipAddrType :: ShippingAddressType
@@ -194,6 +200,20 @@ instance ToJSON ShippingAddress where
             maybeToList (("line2" .=) <$> shipAddrLine2 addr) ++
             maybeToList (("postal_code" .=) <$> shipAddrPostalCode addr) ++
             maybeToList (("state" .=) <$> shipAddrState addr))
+
+instance FromJSON ShippingAddress where
+  parseJSON (Object obj) =
+    ShippingAddress <$>
+    obj .: "recipient_name" <*>
+    obj .: "type" <*>
+    obj .: "line1" <*>
+    obj .:? "line2" <*>
+    obj .: "city" <*>
+    obj .: "country_code" <*>
+    obj .:? "postal_code" <*>
+    obj .:? "state" <*>
+    obj .: "phone"
+  parseJSON _ = mzero
 
 data PayerInfo = PayerInfo
   { payerInfoEmail :: String
@@ -237,6 +257,14 @@ instance ToJSON Details where
             "subtotal" .= detailsSubtotal details,
             "tax" .= detailsTax details]
 
+instance FromJSON Details where
+  parseJSON (Object obj) =
+    Details <$>
+    obj .: "shipping" <*>
+    obj .: "subtotal" <*>
+    obj .: "tax"
+  parseJSON _ = mzero
+
 data Amount = Amount
   { amountCurrency :: String
   , amountTotal :: String
@@ -248,6 +276,14 @@ instance ToJSON Amount where
     object ["currency" .= amountCurrency amt,
             "total" .= amountTotal amt,
             "details" .= amountDetails amt]
+
+instance FromJSON Amount where
+  parseJSON (Object obj) =
+    Amount <$>
+    obj .: "currency" <*>
+    obj .: "total" <*>
+    obj .: "details"
+  parseJSON _ = mzero
 
 data Item = Item
   { itemQuantity :: Integer
@@ -267,6 +303,17 @@ instance ToJSON Item where
             "sku" .= itemSku item,
             "description" .= itemDescription item]
 
+instance FromJSON Item where
+  parseJSON (Object obj) =
+    Item <$>
+    (fmap read (obj .: "quantity")) <*>
+    obj .: "name" <*>
+    obj .: "price" <*>
+    obj .: "currency" <*>
+    obj .: "sku" <*>
+    obj .: "description"
+  parseJSON _ = mzero
+
 data ItemList = ItemList
   { itemListItems :: [Item]
   , itemListShippingAddress :: Maybe ShippingAddress
@@ -277,6 +324,13 @@ instance ToJSON ItemList where
     object (["items" .= itemListItems list] ++
             maybeToList (("shipping_address" .=) <$>
                          itemListShippingAddress list))
+
+instance FromJSON ItemList where
+  parseJSON (Object obj) =
+    ItemList <$>
+    obj .: "items" <*>
+    obj .:? "shipping_address"
+  parseJSON _ = mzero
 
 data Transaction = Transaction
   { transactAmount :: Amount
@@ -289,6 +343,14 @@ instance ToJSON Transaction where
     object ["amount" .= transactAmount trans,
             "description" .= transactDescription trans,
             "item_list" .= transactItemList trans]
+
+instance FromJSON Transaction where
+  parseJSON (Object obj) =
+    Transaction <$>
+    obj .: "amount" <*>
+    obj .: "description" <*>
+    obj .: "item_list"
+  parseJSON _ = mzero
 
 data CreateRequest = CreateRequest
   { createReqIntent :: Intent
@@ -305,6 +367,7 @@ instance ToJSON CreateRequest where
 data CreateResponse = CreateResponse
   { createResIntent :: Intent
   , createResPayer :: Payer
+  , createResTransactions :: [Transaction]
   , createResPayState :: PaymentState
   , createResHateoasLinks :: [HateoasLink]
   } deriving (Show)
@@ -314,6 +377,7 @@ instance FromJSON CreateResponse where
     CreateResponse <$>
     obj .: "intent" <*>
     obj .: "payer" <*>
+    obj .: "transactions" <*>
     obj .: "state" <*>
     obj .: "links"
   parseJSON _ = mzero
