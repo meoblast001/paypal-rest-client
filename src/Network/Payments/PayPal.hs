@@ -19,6 +19,7 @@ module Network.Payments.PayPal
 import Control.Lens
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Lazy as LBS
 import Network.Payments.PayPal.Auth
 import Network.Payments.PayPal.Environment
 import Network.Wreq
@@ -49,7 +50,11 @@ instance Applicative PayPalOperations where
 instance Monad PayPalOperations where
   m >>= f = PPOBind m f
 
-data PayPalError = NoAccessToken | ResponseParseError String deriving (Show)
+type JSONText = LBS.ByteString
+type ErrorMessage = String
+
+data PayPalError = NoAccessToken | ResponseParseError ErrorMessage JSONText
+  deriving (Show)
 
 -- |Authenticate with PayPal and then interact with the service.
 execPayPal :: FromJSON a => EnvironmentUrl -> ClientID -> Secret ->
@@ -75,6 +80,7 @@ execOpers (EnvironmentUrl baseUrl) accessToken
   response <- case method of
     HttpGet -> getWith opts (baseUrl ++ url)
     HttpPost -> postWith opts (baseUrl ++ url) payload
-  case eitherDecode (response ^. responseBody) of
-    Left errMsg -> return $ Left $ ResponseParseError errMsg
+  let responseText = response ^. responseBody
+  case eitherDecode responseText of
+    Left errMsg -> return $ Left $ ResponseParseError errMsg responseText
     Right result -> return $ Right result
