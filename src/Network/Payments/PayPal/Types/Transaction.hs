@@ -73,17 +73,17 @@ data Item = Item
   , itemPrice :: String
   , itemCurrency :: String
   , itemSku :: String
-  , itemDescription :: String
+  , itemDescription :: Maybe String
   } deriving (Show)
 
 instance ToJSON Item where
   toJSON item =
-    object ["quantity" .= itemQuantity item,
-            "name" .= itemName item,
-            "price" .= itemPrice item,
-            "currency" .= itemCurrency item,
-            "sku" .= itemSku item,
-            "description" .= itemDescription item]
+    object (["quantity" .= itemQuantity item,
+             "name" .= itemName item,
+             "price" .= itemPrice item,
+             "currency" .= itemCurrency item,
+             "sku" .= itemSku item] ++
+            maybeToList (("description" .=) <$> itemDescription item))
 
 instance FromJSON Item where
   parseJSON (Object obj) =
@@ -93,7 +93,7 @@ instance FromJSON Item where
     obj .: "price" <*>
     obj .: "currency" <*>
     obj .: "sku" <*>
-    obj .: "description"
+    obj .:? "description"
   parseJSON _ = mzero
 
 -- |A list of items being purchased and the shipping address if one exists.
@@ -118,21 +118,21 @@ instance FromJSON ItemList where
 -- |Details about a financial transaction over PayPal.
 data Transaction = Transaction
   { transactAmount :: Amount
-  , transactDescription :: String
+  , transactDescription :: Maybe String
   , transactItemList :: ItemList
   } deriving (Show)
 
 instance ToJSON Transaction where
   toJSON trans =
-    object ["amount" .= transactAmount trans,
-            "description" .= transactDescription trans,
-            "item_list" .= transactItemList trans]
+    object (["amount" .= transactAmount trans,
+             "item_list" .= transactItemList trans] ++
+            maybeToList (("description" .=) <$> transactDescription trans))
 
 instance FromJSON Transaction where
   parseJSON (Object obj) =
     Transaction <$>
     obj .: "amount" <*>
-    obj .: "description" <*>
+    obj .:? "description" <*>
     obj .: "item_list"
   parseJSON _ = mzero
 

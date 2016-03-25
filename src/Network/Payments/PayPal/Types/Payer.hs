@@ -16,6 +16,7 @@ module Network.Payments.PayPal.Types.Payer
 
 import Control.Monad
 import Data.Aeson
+import qualified Data.Foldable as F
 import Data.Maybe
 import Network.Payments.PayPal.Types.FundingInstrument
 
@@ -60,6 +61,6 @@ instance FromJSON Payer where
   parseJSON (Object obj) =
     Payer <$>
     obj .: "payment_method" <*>
-    obj .: "funding_instruments" <*>
+    (obj .:? "funding_instruments" >>= return . F.concat) <*>
     obj .:? "payer_info"
   parseJSON _ = mzero
