@@ -15,8 +15,11 @@ module Network.Payments.PayPal.Payments
 , RedirectUrls(..)
 , CreateRequest(..)
 , CreateResponse(..)
+, ExecuteRequest(..)
+, ExecuteResponse(..)
 , FindResponse(..)
 , createPayment
+, executePayment
 , findById
 ) where
 
@@ -203,8 +206,8 @@ createPayment request =
 -- |Execute (or complete) a payment that has been approved by the payer.
 executePayment :: PaymentID -> ExecuteRequest ->
                   PayPalOperations ExecuteResponse
-executePayment id request =
-  let url = "/v1/payments/payment/" ++ id ++ "/execute"
+executePayment id' request =
+  let url = "/v1/payments/payment/" ++ id' ++ "/execute"
       contentType = "application/json"
       content = encode request
       payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
@@ -212,8 +215,8 @@ executePayment id request =
 
 -- |Looks up a payment by ID.
 findById :: PaymentID -> PayPalOperations FindResponse
-findById id =
-  let url = "/v1/payments/payment/" ++ id
+findById id' =
+  let url = "/v1/payments/payment/" ++ id'
   in PayPalOperation UseHttpGet url defaults
 
 -- Parses a time in ISO 8106 format to a UTCTime.
