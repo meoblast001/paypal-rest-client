@@ -12,6 +12,7 @@ module Network.Payments.PayPal.Payments
 ( URL
 , PaymentID
 , Intent(..)
+, RedirectUrls(..)
 , CreateRequest(..)
 , CreateResponse(..)
 , FindResponse(..)
@@ -22,6 +23,7 @@ module Network.Payments.PayPal.Payments
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types
+import Data.Maybe
 import Data.Time.Clock
 import Data.Time.Format
 import qualified Network.HTTP.Client as HTTP
@@ -57,6 +59,11 @@ data RedirectUrls = RedirectUrls
   , redirUrlCancel :: URL
   } deriving (Show)
 
+instance ToJSON RedirectUrls where
+  toJSON urls =
+    object ["return_url" .= redirUrlReturn urls,
+            "cancel_url" .= redirUrlCancel urls]
+
 instance FromJSON RedirectUrls where
   parseJSON (Object obj) =
     RedirectUrls <$>
@@ -82,13 +89,15 @@ data CreateRequest = CreateRequest
   { createReqIntent :: Intent
   , createReqPayer :: Payer
   , createReqTransactions :: [Transaction]
+  , createReqRedirectUrls :: Maybe RedirectUrls
   } deriving (Show)
 
 instance ToJSON CreateRequest where
   toJSON req =
-    object ["intent" .= createReqIntent req,
-            "payer" .= createReqPayer req,
-            "transactions" .= createReqTransactions req]
+    object (["intent" .= createReqIntent req,
+             "payer" .= createReqPayer req,
+             "transactions" .= createReqTransactions req] ++
+            maybeToList (("redirect_urls" .=) <$> createReqRedirectUrls req))
 
 -- |Contains a parsed response from PayPal after making a create payment
 -- request.
@@ -100,7 +109,7 @@ data CreateResponse = CreateResponse
   , createResPayId :: PaymentID
   , createResCreateTime :: UTCTime
   , createResPayState :: PaymentState
-  , createResUpdateTime :: UTCTime
+  , createResUpdateTime :: Maybe UTCTime
   , createResHateoasLinks :: [HateoasLink]
   } deriving (Show)
 
@@ -114,7 +123,45 @@ instance FromJSON CreateResponse where
     obj .: "id" <*>
     (obj .: "create_time" >>= parseTimeIso8106) <*>
     obj .: "state" <*>
-    (obj .: "update_time" >>= parseTimeIso8106) <*>
+    (obj .:? "update_time" >>=
+     maybe (return Nothing) (\str -> Just <$> parseTimeIso8106 str)) <*>
+    obj .: "links"
+  parseJSON _ = mzero
+
+-- |Executing a payment has a special transaction object which only contains the
+-- amount.
+data ExecuteTransaction = ExecuteTransaction
+  { executeTransactionAmount :: Amount
+  } deriving (Show)
+
+instance ToJSON ExecuteTransaction where
+  toJSON trans = object ["amount" .= executeTransactionAmount trans]
+
+-- |Request to execute a payment.
+data ExecuteRequest = ExecuteRequest
+  { executeReqPayerId :: String
+  , executeReqTransactions :: [ExecuteTransaction]
+  } deriving (Show)
+
+instance ToJSON ExecuteRequest where
+  toJSON req =
+    object ["payer_id" .= executeReqPayerId req,
+            "transactions" .= executeReqTransactions req]
+
+-- |Response from an execute payment request.
+data ExecuteResponse = ExecuteResponse
+  { executeResIntent :: Intent
+  , executeResPayer :: Payer
+  , executeResTransactions :: [Transaction]
+  , executeResHateoasLinks :: [HateoasLink]
+  } deriving (Show)
+
+instance FromJSON ExecuteResponse where
+  parseJSON (Object obj) =
+    ExecuteResponse <$>
+    obj .: "intent" <*>
+    obj .: "payer" <*>
+    obj .: "transactions" <*>
     obj .: "links"
   parseJSON _ = mzero
 
@@ -127,7 +174,7 @@ data FindResponse = FindResponse
   , findResPayId :: PaymentID
   , findResCreateTime :: UTCTime
   , findResPayState :: PaymentState
-  , findResUpdateTime :: UTCTime
+  , findResUpdateTime :: Maybe UTCTime
   } deriving (Show)
 
 instance FromJSON FindResponse where
@@ -140,13 +187,24 @@ instance FromJSON FindResponse where
     obj .: "id" <*>
     (obj .: "create_time" >>= parseTimeIso8106) <*>
     obj .: "state" <*>
-    (obj .: "update_time" >>= parseTimeIso8106)
+    (obj .:? "update_time" >>= maybe (return Nothing)
+                                     (\str -> Just <$> parseTimeIso8106 str))
   parseJSON _ = mzero
 
 -- |Creates a new payment using payment data.
 createPayment :: CreateRequest -> PayPalOperations CreateResponse
 createPayment request =
   let url = "/v1/payments/payment"
+      contentType = "application/json"
+      content = encode request
+      payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
+  in PayPalOperation (UseHttpPost payload) url defaults
+
+-- |Execute (or complete) a payment that has been approved by the payer.
+executePayment :: PaymentID -> ExecuteRequest ->
+                  PayPalOperations ExecuteResponse
+executePayment id request =
+  let url = "/v1/payments/payment/" ++ id ++ "/execute"
       contentType = "application/json"
       content = encode request
       payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
