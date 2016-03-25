@@ -20,6 +20,7 @@ import Control.Lens
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
+import Data.Time.Clock
 import Network.Payments.PayPal.Auth
 import Network.Payments.PayPal.Environment
 import Network.Wreq
@@ -60,27 +61,50 @@ data PayPalError = NoAccessToken | ResponseParseError ErrorMessage JSONText
 execPayPal :: FromJSON a => EnvironmentUrl -> ClientID -> Secret ->
               PayPalOperations a -> IO (Either PayPalError a)
 execPayPal envUrl username password operations = do
-  mayAccessToken <- fetchAccessToken envUrl username password
+  mayAccessToken <- fetchAccessTokenWithExpiration envUrl username password
   case mayAccessToken of
-    Just accessToken -> execOpers envUrl accessToken operations
+    Just accTokenWithEx -> do
+      result <- execOpers envUrl username password accTokenWithEx operations
+      case result of
+        Left err -> return $ Left err
+        Right (result', _) -> return $ Right result'
     Nothing -> return $ Left NoAccessToken
 
-execOpers :: EnvironmentUrl -> AccessToken -> PayPalOperations a ->
-             IO (Either PayPalError a)
-execOpers _ _ (PPOPure a) = return $ Right a
-execOpers envUrl' accessToken (PPOBind m f) = do
-  treeLeftResult <- execOpers envUrl' accessToken m
-  either (return . Left) (\res -> execOpers envUrl' accessToken $ f res)
+-- |Executes a PayPalOperations monad as IO. Because the access token can
+-- expire and needs to be renewed, this function returns the desired value and
+-- the most current access token when successful.
+execOpers :: EnvironmentUrl -> ClientID -> Secret ->
+             AccessTokenWithExpiration -> PayPalOperations a ->
+             IO (Either PayPalError (a, AccessTokenWithExpiration))
+execOpers _ _ _ accTokenWithEx (PPOPure a) = return $ Right (a, accTokenWithEx)
+execOpers envUrl' username password accTokenWithEx (PPOBind m f) = do
+  treeLeftResult <- execOpers envUrl' username password accTokenWithEx m
+  either (return . Left)
+         (\(res, newAccTk) -> execOpers envUrl' username password
+                                        newAccTk $ f res)
          treeLeftResult
-execOpers (EnvironmentUrl baseUrl) accessToken
+execOpers env@(EnvironmentUrl baseUrl) username password
+          accTokenWithEx@(accessToken, expiration)
           (PayPalOperation method url preOptions payload) = do
-  let accToken = aToken accessToken
-      opts = preOptions &
-             header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
-  response <- case method of
-    HttpGet -> getWith opts (baseUrl ++ url)
-    HttpPost -> postWith opts (baseUrl ++ url) payload
-  let responseText = response ^. responseBody
-  case eitherDecode responseText of
-    Left errMsg -> return $ Left $ ResponseParseError errMsg responseText
-    Right result -> return $ Right result
+  -- Check the validity of the access token and renew it if it expired.
+  curTime <- getCurrentTime
+  mayLatestAccTk <- if diffUTCTime expiration curTime <= 0
+                    then fetchAccessTokenWithExpiration env username password
+                    else return $ Just accTokenWithEx
+  case mayLatestAccTk of
+    -- Either existing access token is still valid or new access token was
+    -- retrieved.
+    Just latestAccTk -> do
+      -- Perform the request.
+      let accToken = aToken accessToken
+          opts = preOptions &
+                 header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
+      response <- case method of
+        HttpGet -> getWith opts (baseUrl ++ url)
+        HttpPost -> postWith opts (baseUrl ++ url) payload
+      let responseText = response ^. responseBody
+      case eitherDecode responseText of
+        Left errMsg -> return $ Left $ ResponseParseError errMsg responseText
+        Right result -> return $ Right (result, latestAccTk)
+    -- Failure to refresh access token.
+    Nothing -> return $ Left NoAccessToken

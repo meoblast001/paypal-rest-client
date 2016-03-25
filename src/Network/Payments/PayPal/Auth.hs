@@ -13,14 +13,18 @@ module Network.Payments.PayPal.Auth
 , Secret
 , Seconds
 , AccessToken(..)
+, AccessTokenWithExpiration
 , fetchAccessToken
+, fetchAccessTokenWithExpiration
+, safeExpirationTime
 ) where
 
 import Control.Lens
 import Control.Monad
 import Data.Aeson
-import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.Text as T
+import Data.Time.Clock
 import qualified Network.HTTP.Client as HTTP
 import Network.Wreq
 import qualified Network.Wreq.Types as WTypes
@@ -43,6 +47,9 @@ data AccessToken = AccessToken
   , aTokenAppId :: String
   , aTokenExpires :: Seconds
   } deriving (Show)
+
+-- |An access token from OAuth together with its UTC expiration time.
+type AccessTokenWithExpiration = (AccessToken, UTCTime)
 
 instance FromJSON AccessToken where
   parseJSON (Object obj) =
@@ -73,3 +80,20 @@ fetchAccessToken (EnvironmentUrl url) username password = do
     in return accessToken
   else
     return Nothing
+
+fetchAccessTokenWithExpiration :: EnvironmentUrl -> ClientID -> Secret ->
+                                  IO (Maybe AccessTokenWithExpiration)
+fetchAccessTokenWithExpiration environment username password= do
+  currentTime <- getCurrentTime
+  mayAccessToken <- fetchAccessToken environment username password
+  let getExpire accToken = (accToken, safeExpirationTime currentTime accToken)
+  return $ maybe Nothing (Just . getExpire) mayAccessToken
+
+-- |Time at which the token should be considered expired. This is a few seconds
+-- before the time that PayPal gives us. Parameters are the time at which the
+-- access token was retrieved and the access token.
+safeExpirationTime :: UTCTime -> AccessToken -> UTCTime
+safeExpirationTime currentTime token =
+  let safetyBuffer = 10 -- Seconds.
+      seconds = aTokenExpires token - safetyBuffer
+  in addUTCTime (fromIntegral seconds) currentTime
