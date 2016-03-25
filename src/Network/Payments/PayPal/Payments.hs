@@ -18,6 +18,7 @@ module Network.Payments.PayPal.Payments
 , ShippingAddressType(..)
 , ShippingAddress(..)
 , PayerInfo(..)
+, PaymentMethod(..)
 , Payer(..)
 , Details(..)
 , Amount(..)
@@ -32,8 +33,10 @@ module Network.Payments.PayPal.Payments
 
 import Control.Monad
 import Data.Aeson
+import Data.Aeson.Types
 import Data.CountryCodes
 import Data.Maybe
+import qualified Data.Text as T
 import qualified Network.HTTP.Client as HTTP
 import Network.Payments.PayPal
 import Network.Payments.PayPal.Hateoas
@@ -65,10 +68,13 @@ instance ToJSON CreditCardType where
   toJSON AMEXCC = "amex"
 
 instance FromJSON CreditCardType where
-  parseJSON (String "visa") = return VisaCC
-  parseJSON (String "mastercard") = return MasterCardCC
-  parseJSON (String "discover") = return DiscoverCC
-  parseJSON (String "amex") = return AMEXCC
+  parseJSON (String text) =
+    case T.toLower text of
+      "visa" -> return VisaCC
+      "mastercard" -> return MasterCardCC
+      "discover" -> return DiscoverCC
+      "amex" -> return AMEXCC
+      otherwise -> mzero
   parseJSON _ = mzero
 
 data PaymentState = PayStateCreated | PayStateApproved | PayStateFailed |
@@ -153,14 +159,15 @@ instance FromJSON CreditCard where
   parseJSON _ = mzero
 
 data FundingInstrument = FundingInstrument
-  { fundInstCreditCard :: CreditCard
+  { fundInstCreditCard :: Maybe CreditCard
   } deriving (Show)
 
 instance ToJSON FundingInstrument where
-  toJSON fundInstr = object ["credit_card" .= fundInstCreditCard fundInstr]
+  toJSON fundInstr =
+    object (maybeToList (("credit_card" .=) <$> fundInstCreditCard fundInstr))
 
 instance FromJSON FundingInstrument where
-  parseJSON (Object obj) = FundingInstrument <$> obj .: "credit_card"
+  parseJSON (Object obj) = FundingInstrument <$> obj .:? "credit_card"
   parseJSON _ = mzero
 
 data ShippingAddressType =
@@ -179,40 +186,40 @@ instance FromJSON ShippingAddressType where
 
 data ShippingAddress = ShippingAddress
   { shipAddrRecipientName :: String
-  , shipAddrType :: ShippingAddressType
+  , shipAddrType :: Maybe ShippingAddressType
   , shipAddrLine1 :: String
   , shipAddrLine2 :: Maybe String
   , shipAddrCity :: String
   , shipAddrCountryCode :: CountryCode
   , shipAddrPostalCode :: Maybe String
   , shipAddrState :: Maybe String
-  , shipAddrPhone :: String
+  , shipAddrPhone :: Maybe String
   } deriving (Show)
 
 instance ToJSON ShippingAddress where
   toJSON addr =
     object (["recipient_name" .= shipAddrRecipientName addr,
-             "type" .= shipAddrType addr,
              "line1" .= shipAddrLine1 addr,
              "city" .= shipAddrCity addr,
-             "country_code" .= toText (shipAddrCountryCode addr),
-             "phone" .= shipAddrPhone addr] ++
+             "country_code" .= toText (shipAddrCountryCode addr)] ++
+            maybeToList (("type" .=) <$> shipAddrType addr) ++
             maybeToList (("line2" .=) <$> shipAddrLine2 addr) ++
             maybeToList (("postal_code" .=) <$> shipAddrPostalCode addr) ++
-            maybeToList (("state" .=) <$> shipAddrState addr))
+            maybeToList (("state" .=) <$> shipAddrState addr) ++
+            maybeToList (("phone" .=) <$> shipAddrPhone addr))
 
 instance FromJSON ShippingAddress where
   parseJSON (Object obj) =
     ShippingAddress <$>
     obj .: "recipient_name" <*>
-    obj .: "type" <*>
+    obj .:? "type" <*>
     obj .: "line1" <*>
     obj .:? "line2" <*>
     obj .: "city" <*>
     obj .: "country_code" <*>
     obj .:? "postal_code" <*>
     obj .:? "state" <*>
-    obj .: "phone"
+    obj .:? "phone"
   parseJSON _ = mzero
 
 data PayerInfo = PayerInfo
@@ -226,21 +233,33 @@ instance FromJSON PayerInfo where
   parseJSON (Object obj) = PayerInfo <$> obj .: "email"
   parseJSON _ = mzero
 
+data PaymentMethod = PayMethodPayPal | PayMethodCreditCard deriving (Show)
+
+instance ToJSON PaymentMethod where
+  toJSON PayMethodPayPal = "paypal"
+  toJSON PayMethodCreditCard = "credit_card"
+
+instance FromJSON PaymentMethod where
+  parseJSON (String "paypal") = return PayMethodPayPal
+  parseJSON (String "credit_card") = return PayMethodCreditCard
+  parseJSON _ = mzero
+
 data Payer = Payer
-  { payerFundingInstruments :: [FundingInstrument]
+  { payerPaymentMethod :: PaymentMethod
+  , payerFundingInstruments :: [FundingInstrument]
   , payerInfo :: Maybe PayerInfo
   } deriving (Show)
 
 instance ToJSON Payer where
   toJSON payer =
-    -- TODO: Support something other than credit card.
-    object (["payment_method" .= ("credit_card" :: String),
+    object (["payment_method" .= payerPaymentMethod payer,
              "funding_instruments" .= payerFundingInstruments payer] ++
             maybeToList (("payer_info" .=) <$> payerInfo payer))
 
 instance FromJSON Payer where
   parseJSON (Object obj) =
     Payer <$>
+    obj .: "payment_method" <*>
     obj .: "funding_instruments" <*>
     obj .:? "payer_info"
   parseJSON _ = mzero
@@ -306,7 +325,7 @@ instance ToJSON Item where
 instance FromJSON Item where
   parseJSON (Object obj) =
     Item <$>
-    (fmap read (obj .: "quantity")) <*>
+    (obj .: "quantity" >>= parseFuzzyJSONInt) <*>
     obj .: "name" <*>
     obj .: "price" <*>
     obj .: "currency" <*>
@@ -389,3 +408,11 @@ createPayment request =
       content = encode request
       payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
   in PayPalOperation HttpPost url defaults payload
+
+-- |This takes either a string or a number and tries to produce an integer out
+-- of it. This is necessary because PayPal apparently returns different types
+-- for the same data depending on the usage...
+parseFuzzyJSONInt :: (Integral a, Read a) => Value -> Parser a
+parseFuzzyJSONInt (String txt) = return $ read $ T.unpack txt
+parseFuzzyJSONInt (Number num) = return $ round num
+pasreFuzzyJSONInt _ = mzero
