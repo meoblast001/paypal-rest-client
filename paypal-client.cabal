@@ -16,6 +16,10 @@ library
     , Network.Payments.PayPal.Auth
     , Network.Payments.PayPal.Hateoas
     , Network.Payments.PayPal.Payments
+    , Network.Payments.PayPal.Types.Address
+    , Network.Payments.PayPal.Types.FundingInstrument
+    , Network.Payments.PayPal.Types.Payer
+    , Network.Payments.PayPal.Types.Transaction
   build-depends:
       base >= 4 && < 5
     , bytestring >= 0.10.0
