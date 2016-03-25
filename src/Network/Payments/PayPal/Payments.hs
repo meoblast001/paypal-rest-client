@@ -45,6 +45,7 @@ import qualified Network.Wreq.Types as WTypes
 
 type URL = String
 
+-- |Payment intent.
 data Intent = SaleIntent | AuthoriseIntent | OrderIntent deriving (Show)
 
 instance ToJSON Intent where
@@ -58,6 +59,7 @@ instance FromJSON Intent where
   parseJSON (String "order") = return OrderIntent
   parseJSON _ = mzero
 
+-- |Type of credit card being used.
 data CreditCardType = VisaCC | MasterCardCC | DiscoverCC | AMEXCC
   deriving (Show)
 
@@ -69,6 +71,8 @@ instance ToJSON CreditCardType where
 
 instance FromJSON CreditCardType where
   parseJSON (String text) =
+    -- Lower case is documented but sometimes PayPal likes to return upper
+    -- case...
     case T.toLower text of
       "visa" -> return VisaCC
       "mastercard" -> return MasterCardCC
@@ -90,6 +94,7 @@ instance FromJSON PaymentState where
   parseJSON (String "pending") = return PayStatePending
   parseJSON _ = mzero
 
+-- Billing address of the payer.
 data Address = Address
   { addressLine1 :: String
   , addressLine2 :: Maybe String
@@ -122,6 +127,7 @@ instance FromJSON Address where
     obj .: "phone"
   parseJSON _ = mzero
 
+-- |Information about a credit card.
 data CreditCard = CreditCard
   { creditCardNumber :: String
   , creditCardType :: CreditCardType
@@ -158,6 +164,7 @@ instance FromJSON CreditCard where
     obj .:? "billing_address"
   parseJSON _ = mzero
 
+-- |Representation of either a new credit card or existing credit card data.
 data FundingInstrument = FundingInstrument
   { fundInstCreditCard :: Maybe CreditCard
   } deriving (Show)
@@ -170,6 +177,7 @@ instance FromJSON FundingInstrument where
   parseJSON (Object obj) = FundingInstrument <$> obj .:? "credit_card"
   parseJSON _ = mzero
 
+-- |The type of the address.
 data ShippingAddressType =
   ShipAddrResidential | ShipAddrBusiness | ShipAddrMailbox deriving (Show)
 
@@ -184,6 +192,7 @@ instance FromJSON ShippingAddressType where
   parseJSON (String "mailbox") = return ShipAddrMailbox
   parseJSON _ = mzero
 
+-- |The payer's shipping address.
 data ShippingAddress = ShippingAddress
   { shipAddrRecipientName :: String
   , shipAddrType :: Maybe ShippingAddressType
@@ -222,6 +231,7 @@ instance FromJSON ShippingAddress where
     obj .:? "phone"
   parseJSON _ = mzero
 
+-- |Optional additional information about the payer.
 data PayerInfo = PayerInfo
   { payerInfoEmail :: String
   } deriving (Show)
@@ -233,6 +243,7 @@ instance FromJSON PayerInfo where
   parseJSON (Object obj) = PayerInfo <$> obj .: "email"
   parseJSON _ = mzero
 
+-- |Method of payment.
 data PaymentMethod = PayMethodPayPal | PayMethodCreditCard deriving (Show)
 
 instance ToJSON PaymentMethod where
@@ -244,6 +255,7 @@ instance FromJSON PaymentMethod where
   parseJSON (String "credit_card") = return PayMethodCreditCard
   parseJSON _ = mzero
 
+-- |Information about the payer in a transaction.
 data Payer = Payer
   { payerPaymentMethod :: PaymentMethod
   , payerFundingInstruments :: [FundingInstrument]
@@ -264,6 +276,7 @@ instance FromJSON Payer where
     obj .:? "payer_info"
   parseJSON _ = mzero
 
+-- |Details about the amount of a transaction.
 data Details = Details
   { detailsShipping :: String
   , detailsSubtotal :: String
@@ -284,6 +297,8 @@ instance FromJSON Details where
     obj .: "tax"
   parseJSON _ = mzero
 
+-- |Amount of a transaction and its currency. The details must sum up to the
+-- total or the request is rejected.
 data Amount = Amount
   { amountCurrency :: String
   , amountTotal :: String
@@ -304,6 +319,7 @@ instance FromJSON Amount where
     obj .: "details"
   parseJSON _ = mzero
 
+-- |An individual item being purchased.
 data Item = Item
   { itemQuantity :: Integer
   , itemName :: String
@@ -333,6 +349,7 @@ instance FromJSON Item where
     obj .: "description"
   parseJSON _ = mzero
 
+-- |A list of items being purchased and the shipping address if one exists.
 data ItemList = ItemList
   { itemListItems :: [Item]
   , itemListShippingAddress :: Maybe ShippingAddress
@@ -351,6 +368,7 @@ instance FromJSON ItemList where
     obj .:? "shipping_address"
   parseJSON _ = mzero
 
+-- |Details about a financial transaction over PayPal.
 data Transaction = Transaction
   { transactAmount :: Amount
   , transactDescription :: String
@@ -371,6 +389,7 @@ instance FromJSON Transaction where
     obj .: "item_list"
   parseJSON _ = mzero
 
+-- |Contains data sent to PayPal to create a payment.
 data CreateRequest = CreateRequest
   { createReqIntent :: Intent
   , createReqPayer :: Payer
@@ -383,6 +402,8 @@ instance ToJSON CreateRequest where
             "payer" .= createReqPayer req,
             "transactions" .= createReqTransactions req]
 
+-- |Contains a parsed response from PayPal after making a create payment
+-- request.
 data CreateResponse = CreateResponse
   { createResIntent :: Intent
   , createResPayer :: Payer
@@ -401,6 +422,7 @@ instance FromJSON CreateResponse where
     obj .: "links"
   parseJSON _ = mzero
 
+-- |Creates a new payment using payment data.
 createPayment :: CreateRequest -> PayPalOperations CreateResponse
 createPayment request =
   let url = "/v1/payments/payment"
