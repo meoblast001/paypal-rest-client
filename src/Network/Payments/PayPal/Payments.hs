@@ -10,6 +10,7 @@
 
 module Network.Payments.PayPal.Payments
 ( URL
+, PaymentID
 , Intent(..)
 , CreateRequest(..)
 , CreateResponse(..)
@@ -18,6 +19,9 @@ module Network.Payments.PayPal.Payments
 
 import Control.Monad
 import Data.Aeson
+import Data.Aeson.Types
+import Data.Time.Clock
+import Data.Time.Format
 import qualified Network.HTTP.Client as HTTP
 import Network.Payments.PayPal
 import Network.Payments.PayPal.Hateoas
@@ -26,7 +30,11 @@ import Network.Payments.PayPal.Types.Transaction
 import Network.Wreq
 import qualified Network.Wreq.Types as WTypes
 
+-- A string representing a URL.
 type URL = String
+
+-- The ID of a payment provided by PayPal.
+type PaymentID = String
 
 -- |Payment intent.
 data Intent = SaleIntent | AuthoriseIntent | OrderIntent deriving (Show)
@@ -40,6 +48,18 @@ instance FromJSON Intent where
   parseJSON (String "sale") = return SaleIntent
   parseJSON (String "authorize") = return AuthoriseIntent
   parseJSON (String "order") = return OrderIntent
+  parseJSON _ = mzero
+
+data RedirectUrls = RedirectUrls
+  { redirUrlReturn :: URL
+  , redirUrlCancel :: URL
+  } deriving (Show)
+
+instance FromJSON RedirectUrls where
+  parseJSON (Object obj) =
+    RedirectUrls <$>
+    obj .: "return_url" <*>
+    obj .: "cancel_url"
   parseJSON _ = mzero
 
 data PaymentState = PayStateCreated | PayStateApproved | PayStateFailed |
@@ -74,7 +94,11 @@ data CreateResponse = CreateResponse
   { createResIntent :: Intent
   , createResPayer :: Payer
   , createResTransactions :: [Transaction]
+  , createResRedirectUrls :: Maybe RedirectUrls
+  , createResPayId :: PaymentID
+  , createResCreateTime :: UTCTime
   , createResPayState :: PaymentState
+  , createResUpdateTime :: UTCTime
   , createResHateoasLinks :: [HateoasLink]
   } deriving (Show)
 
@@ -84,9 +108,18 @@ instance FromJSON CreateResponse where
     obj .: "intent" <*>
     obj .: "payer" <*>
     obj .: "transactions" <*>
+    obj .:? "redirect_urls" <*>
+    obj .: "id" <*>
+    (obj .: "create_time" >>= parseTimeIso8106) <*>
     obj .: "state" <*>
+    (obj .: "update_time" >>= parseTimeIso8106) <*>
     obj .: "links"
   parseJSON _ = mzero
+
+-- Parses a time in ISO 8106 format to a UTCTime.
+parseTimeIso8106 :: String -> Parser UTCTime
+parseTimeIso8106 str =
+  parseTimeM True defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ") str
 
 -- |Creates a new payment using payment data.
 createPayment :: CreateRequest -> PayPalOperations CreateResponse
