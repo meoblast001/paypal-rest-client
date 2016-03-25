@@ -12,6 +12,7 @@
 
 module Network.Payments.PayPal
 ( HttpMethod(..)
+, UseHttpMethod(..)
 , PayPalOperations(..)
 , execPayPal
 ) where
@@ -28,6 +29,14 @@ import Network.Wreq
 -- |HTTP method (GET/POST).
 data HttpMethod = HttpGet | HttpPost deriving (Show)
 
+-- |HTTP method to use in the request (GET/POST).
+data UseHttpMethod = UseHttpGet | UseHttpPost Payload
+
+-- Instance of show that ignores the payload.
+instance Show UseHttpMethod where
+  show UseHttpGet = "HttpGet"
+  show (UseHttpPost _) = "HttpPost"
+
 -- |A monad composing multiple PayPal operations which are to be performed.
 -- The result can be executed using the execPayPal function.
 data PayPalOperations :: * -> * where
@@ -35,10 +44,9 @@ data PayPalOperations :: * -> * where
   PPOBind :: PayPalOperations a -> (a -> PayPalOperations b) ->
              PayPalOperations b
   PayPalOperation :: FromJSON a =>
-                     { ppoMethod :: HttpMethod
+                     { ppoMethod :: UseHttpMethod
                      , ppoUrl :: String
                      , ppoOptions :: Options
-                     , ppoPayload :: Payload
                      } -> PayPalOperations a
 
 instance Functor PayPalOperations where
@@ -85,7 +93,7 @@ execOpers envUrl' username password accTokenWithEx (PPOBind m f) = do
          treeLeftResult
 execOpers env@(EnvironmentUrl baseUrl) username password
           accTokenWithEx@(accessToken, expiration)
-          (PayPalOperation method url preOptions payload) = do
+          (PayPalOperation method url preOptions) = do
   -- Check the validity of the access token and renew it if it expired.
   curTime <- getCurrentTime
   mayLatestAccTk <- if diffUTCTime expiration curTime <= 0
@@ -100,8 +108,8 @@ execOpers env@(EnvironmentUrl baseUrl) username password
           opts = preOptions &
                  header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
       response <- case method of
-        HttpGet -> getWith opts (baseUrl ++ url)
-        HttpPost -> postWith opts (baseUrl ++ url) payload
+        UseHttpGet -> getWith opts (baseUrl ++ url)
+        UseHttpPost payload -> postWith opts (baseUrl ++ url) payload
       let responseText = response ^. responseBody
       case eitherDecode responseText of
         Left errMsg -> return $ Left $ ResponseParseError errMsg responseText

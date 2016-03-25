@@ -14,7 +14,9 @@ module Network.Payments.PayPal.Payments
 , Intent(..)
 , CreateRequest(..)
 , CreateResponse(..)
+, FindResponse(..)
 , createPayment
+, findById
 ) where
 
 import Control.Monad
@@ -116,10 +118,30 @@ instance FromJSON CreateResponse where
     obj .: "links"
   parseJSON _ = mzero
 
--- Parses a time in ISO 8106 format to a UTCTime.
-parseTimeIso8106 :: String -> Parser UTCTime
-parseTimeIso8106 str =
-  parseTimeM True defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ") str
+-- |Contains a parsed response from a find payment request.
+data FindResponse = FindResponse
+  { findResIntent :: Intent
+  , findResPayer :: Payer
+  , findResTransactions :: [Transaction]
+  , findResRedirectUrls :: Maybe RedirectUrls
+  , findResPayId :: PaymentID
+  , findResCreateTime :: UTCTime
+  , findResPayState :: PaymentState
+  , findResUpdateTime :: UTCTime
+  } deriving (Show)
+
+instance FromJSON FindResponse where
+  parseJSON (Object obj) =
+    FindResponse <$>
+    obj .: "intent" <*>
+    obj .: "payer" <*>
+    obj .: "transactions" <*>
+    obj .:? "redirect_urls" <*>
+    obj .: "id" <*>
+    (obj .: "create_time" >>= parseTimeIso8106) <*>
+    obj .: "state" <*>
+    (obj .: "update_time" >>= parseTimeIso8106)
+  parseJSON _ = mzero
 
 -- |Creates a new payment using payment data.
 createPayment :: CreateRequest -> PayPalOperations CreateResponse
@@ -128,4 +150,15 @@ createPayment request =
       contentType = "application/json"
       content = encode request
       payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
-  in PayPalOperation HttpPost url defaults payload
+  in PayPalOperation (UseHttpPost payload) url defaults
+
+-- |Looks up a payment by ID.
+findById :: PaymentID -> PayPalOperations FindResponse
+findById id =
+  let url = "/v1/payments/payment/" ++ id
+  in PayPalOperation UseHttpGet url defaults
+
+-- Parses a time in ISO 8106 format to a UTCTime.
+parseTimeIso8106 :: String -> Parser UTCTime
+parseTimeIso8106 str =
+  parseTimeM True defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ") str
