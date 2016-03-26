@@ -17,11 +17,13 @@ module Network.Payments.PayPal
 , execPayPal
 ) where
 
+import Control.Exception
 import Control.Lens
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time.Clock
+import qualified Network.HTTP.Client as HTTPClient
 import Network.Payments.PayPal.Auth
 import Network.Payments.PayPal.Environment
 import Network.Wreq
@@ -62,8 +64,8 @@ instance Monad PayPalOperations where
 type JSONText = LBS.ByteString
 type ErrorMessage = String
 
-data PayPalError = NoAccessToken | ResponseParseError ErrorMessage JSONText
-  deriving (Show)
+data PayPalError = NoAccessToken | ResponseParseError ErrorMessage JSONText |
+                   HttpError HTTPClient.HttpException deriving (Show)
 
 -- |Authenticate with PayPal and then interact with the service.
 execPayPal :: FromJSON a => EnvironmentUrl -> ClientID -> Secret ->
@@ -107,12 +109,20 @@ execOpers env@(EnvironmentUrl baseUrl) username password
       let accToken = aToken accessToken
           opts = preOptions &
                  header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
-      response <- case method of
-        UseHttpGet -> getWith opts (baseUrl ++ url)
-        UseHttpPost payload -> postWith opts (baseUrl ++ url) payload
-      let responseText = response ^. responseBody
-      case eitherDecode responseText of
-        Left errMsg -> return $ Left $ ResponseParseError errMsg responseText
-        Right result -> return $ Right (result, latestAccTk)
+          responseIO = case method of
+            UseHttpGet -> getWith opts (baseUrl ++ url)
+            UseHttpPost payload -> postWith opts (baseUrl ++ url) payload
+      responseOrErr <- (Right <$> responseIO) `catch`
+                       (\e -> return $ Left e)
+      case responseOrErr of
+        -- HTTP request failed.
+        Left err -> return $ Left (HttpError err)
+        -- HTTP request successful.
+        Right response -> do
+          let responseText = response ^. responseBody
+          case eitherDecode responseText of
+            Left errMsg -> return $ Left $ ResponseParseError errMsg
+                                                              responseText
+            Right result -> return $ Right (result, latestAccTk)
     -- Failure to refresh access token.
     Nothing -> return $ Left NoAccessToken
