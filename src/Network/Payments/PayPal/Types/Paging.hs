@@ -13,7 +13,6 @@ module Network.Payments.PayPal.Types.Paging
 , PagingSortOrder(..)
 , PagingRequest(..)
 , pagingReqToQuery
-, defaultPaging
 ) where
 
 import qualified Data.ByteString as BS
@@ -40,8 +39,8 @@ instance Show PagingSortOrder where
 data PagingRequest = PagingRequest
   { pagingCount :: Maybe Integer
   , pagingStartId :: Maybe String
-  , pagingStartTime :: Maybe UTCTime
-  , pagingEndTime :: Maybe UTCTime
+  , pagingStartTime :: UTCTime
+  , pagingEndTime :: UTCTime
   , pagingSortBy :: Maybe PagingSortBy
   , pagingSortOrder :: Maybe PagingSortOrder
   } deriving (Show)
@@ -51,8 +50,8 @@ pagingReqToQuery :: PagingRequest -> String
 pagingReqToQuery req =
   let queryItems = [("count", showToBS <$> pagingCount req),
                     ("start_id", stringToBS <$> pagingStartId req),
-                    ("start_time", timeToBS <$> pagingStartTime req),
-                    ("end_time", timeToBS <$> pagingEndTime req),
+                    ("start_time", Just $ timeToBS $ pagingStartTime req),
+                    ("end_time", Just $ timeToBS $ pagingEndTime req),
                     ("sort_by", showToBS <$> pagingSortBy req),
                     ("sort_order", showToBS <$> pagingSortOrder req)]
   in BS8.unpack $ renderQuery False queryItems
@@ -64,7 +63,3 @@ pagingReqToQuery req =
                                        (iso8601DateFormat $ Just "%H:%M:%SZ") x
     showToBS :: Show a => a -> BS.ByteString
     showToBS x = BS8.pack $ show x
-
--- |A paging request with everything set to nothing. Override these values.
-defaultPaging :: PagingRequest
-defaultPaging = PagingRequest Nothing Nothing Nothing Nothing Nothing Nothing

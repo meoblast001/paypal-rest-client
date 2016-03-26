@@ -201,15 +201,15 @@ instance FromJSON FindResponse where
 data ListResponse = ListResponse
   { listResPayments :: [CreateResponse]
   , listResCount :: Integer
-  , listResNextId :: PaymentID
+  , listResNextId :: Maybe PaymentID
   } deriving (Show)
 
 instance FromJSON ListResponse where
   parseJSON (Object obj) =
     ListResponse <$>
-    obj .: "payments" <*>
+    (fromMaybe [] <$> obj .:? "payments") <*>
     obj .: "count" <*>
-    obj .: "next_id"
+    obj .:? "next_id"
   parseJSON _ = mzero
 
 -- |Creates a new payment using payment data.
