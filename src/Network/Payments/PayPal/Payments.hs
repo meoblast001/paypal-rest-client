@@ -18,9 +18,11 @@ module Network.Payments.PayPal.Payments
 , ExecuteRequest(..)
 , ExecuteResponse(..)
 , FindResponse(..)
+, ListResponse(..)
 , createPayment
 , executePayment
-, findById
+, findPaymentById
+, listPayments
 ) where
 
 import Control.Monad
@@ -32,6 +34,7 @@ import Data.Time.Format
 import qualified Network.HTTP.Client as HTTP
 import Network.Payments.PayPal
 import Network.Payments.PayPal.Hateoas
+import Network.Payments.PayPal.Types.Paging
 import Network.Payments.PayPal.Types.Payer
 import Network.Payments.PayPal.Types.Transaction
 import Network.Wreq
@@ -194,6 +197,21 @@ instance FromJSON FindResponse where
                                      (\str -> Just <$> parseTimeIso8106 str))
   parseJSON _ = mzero
 
+-- Response to a payment list request.
+data ListResponse = ListResponse
+  { listResPayments :: [CreateResponse]
+  , listResCount :: Integer
+  , listResNextId :: PaymentID
+  } deriving (Show)
+
+instance FromJSON ListResponse where
+  parseJSON (Object obj) =
+    ListResponse <$>
+    obj .: "payments" <*>
+    obj .: "count" <*>
+    obj .: "next_id"
+  parseJSON _ = mzero
+
 -- |Creates a new payment using payment data.
 createPayment :: CreateRequest -> PayPalOperations CreateResponse
 createPayment request =
@@ -214,9 +232,16 @@ executePayment id' request =
   in PayPalOperation (UseHttpPost payload) url defaults
 
 -- |Looks up a payment by ID.
-findById :: PaymentID -> PayPalOperations FindResponse
-findById id' =
+findPaymentById :: PaymentID -> PayPalOperations FindResponse
+findPaymentById id' =
   let url = "/v1/payments/payment/" ++ id'
+  in PayPalOperation UseHttpGet url defaults
+
+-- |Lists payments, possibly with paging.
+listPayments :: Maybe PagingRequest -> PayPalOperations ListResponse
+listPayments pagingRequest =
+  let url = "/v1/payments/payment/" ++
+            (maybe mempty (\req -> "?" ++ pagingReqToQuery req) pagingRequest)
   in PayPalOperation UseHttpGet url defaults
 
 -- Parses a time in ISO 8106 format to a UTCTime.

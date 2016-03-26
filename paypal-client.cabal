@@ -18,6 +18,7 @@ library
     , Network.Payments.PayPal.Payments
     , Network.Payments.PayPal.Types.Address
     , Network.Payments.PayPal.Types.FundingInstrument
+    , Network.Payments.PayPal.Types.Paging
     , Network.Payments.PayPal.Types.Payer
     , Network.Payments.PayPal.Types.Transaction
   build-depends:
@@ -25,6 +26,7 @@ library
     , bytestring >= 0.10.0
     , wreq >= 0.4.0 && < 0.5.0
     , http-client >= 0.4.6
+    , http-types >= 0.8
     , lens >= 4.5
     , text >= 1.2
     , aeson >= 0.10
