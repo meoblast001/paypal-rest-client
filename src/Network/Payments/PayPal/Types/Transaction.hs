@@ -22,6 +22,7 @@ import Data.Aeson.Types
 import Data.Maybe
 import qualified Data.Text as T
 import Network.Payments.PayPal.Types.Address
+import Network.Payments.PayPal.Types.Currency
 
 -- |Details about the amount of a transaction.
 data Details = Details
@@ -47,7 +48,7 @@ instance FromJSON Details where
 -- |Amount of a transaction and its currency. The details must sum up to the
 -- total or the request is rejected.
 data Amount = Amount
-  { amountCurrency :: String
+  { amountCurrency :: Currency
   , amountTotal :: String
   , amountDetails :: Details
   } deriving (Show)

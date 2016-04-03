@@ -16,6 +16,7 @@ library
     , Network.Payments.PayPal.Auth
     , Network.Payments.PayPal.Payments
     , Network.Payments.PayPal.Types.Address
+    , Network.Payments.PayPal.Types.Currency
     , Network.Payments.PayPal.Types.FundingInstrument
     , Network.Payments.PayPal.Types.Hateoas
     , Network.Payments.PayPal.Types.Paging
@@ -25,6 +26,7 @@ library
       base >= 4 && < 5
     , bytestring >= 0.10.0
     , containers >= 0.1.0
+    , safe >= 0.2
     , wreq >= 0.4.0 && < 0.5.0
     , http-client >= 0.4.6
     , http-types >= 0.8
