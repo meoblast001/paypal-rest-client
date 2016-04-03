@@ -29,10 +29,10 @@ import Network.Payments.PayPal.Environment
 import Network.Wreq
 
 -- |HTTP method (GET/POST).
-data HttpMethod = HttpGet | HttpPost deriving (Show)
+data HttpMethod = HttpGet | HttpPost | HttpPatch deriving (Show)
 
 -- |HTTP method to use in the request (GET/POST).
-data UseHttpMethod = UseHttpGet | UseHttpPost Payload
+data UseHttpMethod = UseHttpGet | UseHttpPost Payload | UseHttpPatch Payload
 
 -- Instance of show that ignores the payload.
 instance Show UseHttpMethod where
@@ -112,6 +112,8 @@ execOpers env@(EnvironmentUrl baseUrl) username password
           responseIO = case method of
             UseHttpGet -> getWith opts (baseUrl ++ url)
             UseHttpPost payload -> postWith opts (baseUrl ++ url) payload
+            UseHttpPatch payload ->
+              customPayloadMethodWith "PATCH" opts (baseUrl ++ url) payload
       responseOrErr <- (Right <$> responseIO) `catch`
                        (\e -> return $ Left e)
       case responseOrErr of
