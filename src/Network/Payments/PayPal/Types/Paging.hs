@@ -22,14 +22,14 @@ import Data.Time.Format
 import Network.HTTP.Types.URI
 
 -- |Sort by create or update time.
-data PagingSortBy = PagingSortCreated | PagingSortUpdated
+data PagingSortBy = PagingSortCreated | PagingSortUpdated deriving (Eq, Read)
 
 instance Show PagingSortBy where
   show PagingSortCreated = "create_time"
   show PagingSortUpdated = "update_time"
 
 -- |Sort order.
-data PagingSortOrder = PagingSortAsc | PagingSortDesc
+data PagingSortOrder = PagingSortAsc | PagingSortDesc deriving (Eq, Read)
 
 instance Show PagingSortOrder where
   show PagingSortAsc = "asc"
@@ -43,7 +43,7 @@ data PagingRequest = PagingRequest
   , pagingEndTime :: UTCTime
   , pagingSortBy :: Maybe PagingSortBy
   , pagingSortOrder :: Maybe PagingSortOrder
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 -- |Create a query string from a paging request.
 pagingReqToQuery :: PagingRequest -> String

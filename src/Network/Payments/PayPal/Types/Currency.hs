@@ -19,7 +19,7 @@ import Safe
 data Currency =
   AUD | BRL | CAD | CZK | DKK | EUR | HKD | HUF | ILS | JPY | MYR | MXN | TWD |
   NZD | NOK | PHP | PLN | GBP | RUB | SGD | SEK | CHF | THB | TRY | USD
-  deriving (Read, Show)
+  deriving (Eq, Read, Show)
 
 instance ToJSON Currency where
   toJSON currency = String $ T.pack $ show currency

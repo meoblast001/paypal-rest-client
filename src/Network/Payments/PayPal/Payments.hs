@@ -52,7 +52,8 @@ type URL = String
 type PaymentID = String
 
 -- |Payment intent.
-data Intent = SaleIntent | AuthoriseIntent | OrderIntent deriving (Show)
+data Intent = SaleIntent | AuthoriseIntent | OrderIntent
+  deriving (Eq, Read, Show)
 
 instance ToJSON Intent where
   toJSON SaleIntent = "sale"
@@ -68,7 +69,7 @@ instance FromJSON Intent where
 data RedirectUrls = RedirectUrls
   { redirUrlReturn :: URL
   , redirUrlCancel :: URL
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON RedirectUrls where
   toJSON urls =
@@ -86,12 +87,12 @@ data ReturnLinkParams = ReturnLinkParams
   { retLinkParamPayId :: PaymentID
   , retLinkParamToken :: String
   , retLinkParamPayerId :: String
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 -- |Current status of the PayPal payment.
 data PaymentState = PayStateCreated | PayStateApproved | PayStateFailed |
                     PayStateCancelled | PayStateExpired | PayStatePending
-                    deriving (Show)
+                    deriving (Eq, Read, Show)
 
 instance FromJSON PaymentState where
   parseJSON (String "created") = return PayStateCreated
@@ -108,7 +109,7 @@ data CreateRequest = CreateRequest
   , createReqPayer :: Payer
   , createReqTransactions :: [Transaction]
   , createReqRedirectUrls :: Maybe RedirectUrls
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON CreateRequest where
   toJSON req =
@@ -129,7 +130,7 @@ data CreateResponse = CreateResponse
   , createResPayState :: PaymentState
   , createResUpdateTime :: Maybe UTCTime
   , createResHateoasLinks :: [HateoasLink]
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance FromJSON CreateResponse where
   parseJSON (Object obj) =
@@ -150,7 +151,7 @@ instance FromJSON CreateResponse where
 -- amount.
 data ExecuteTransaction = ExecuteTransaction
   { executeTransactionAmount :: Amount
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON ExecuteTransaction where
   toJSON trans = object ["amount" .= executeTransactionAmount trans]
@@ -159,7 +160,7 @@ instance ToJSON ExecuteTransaction where
 data ExecuteRequest = ExecuteRequest
   { executeReqPayerId :: String
   , executeReqTransactions :: [ExecuteTransaction]
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON ExecuteRequest where
   toJSON req =
@@ -172,7 +173,7 @@ data ExecuteResponse = ExecuteResponse
   , executeResPayer :: Payer
   , executeResTransactions :: [Transaction]
   , executeResHateoasLinks :: [HateoasLink]
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance FromJSON ExecuteResponse where
   parseJSON (Object obj) =
@@ -193,7 +194,7 @@ data FindResponse = FindResponse
   , findResCreateTime :: UTCTime
   , findResPayState :: PaymentState
   , findResUpdateTime :: Maybe UTCTime
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance FromJSON FindResponse where
   parseJSON (Object obj) =
@@ -214,7 +215,7 @@ data ListResponse = ListResponse
   { listResPayments :: [CreateResponse]
   , listResCount :: Integer
   , listResNextId :: Maybe PaymentID
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance FromJSON ListResponse where
   parseJSON (Object obj) =

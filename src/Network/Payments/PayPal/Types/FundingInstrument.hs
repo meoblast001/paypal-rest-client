@@ -22,7 +22,7 @@ import Network.Payments.PayPal.Types.Address
 
 -- |Type of credit card being used.
 data CreditCardType = VisaCC | MasterCardCC | DiscoverCC | AMEXCC
-  deriving (Show)
+  deriving (Eq, Read, Show)
 
 instance ToJSON CreditCardType where
   toJSON VisaCC = "visa"
@@ -52,7 +52,7 @@ data CreditCard = CreditCard
   , creditCardFirstName :: Maybe String
   , creditCardLastName :: Maybe String
   , creditCardBillingAddress :: Maybe Address
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON CreditCard where
   toJSON cc =
@@ -82,7 +82,7 @@ instance FromJSON CreditCard where
 -- |Representation of either a new credit card or existing credit card data.
 data FundingInstrument = FundingInstrument
   { fundInstCreditCard :: Maybe CreditCard
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON FundingInstrument where
   toJSON fundInstr =

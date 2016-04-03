@@ -28,7 +28,7 @@ data Address = Address
   , addressPostalCode :: Maybe String
   , addressState :: Maybe String
   , addressPhone :: String
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON Address where
   toJSON addr =
@@ -54,7 +54,8 @@ instance FromJSON Address where
 
 -- |The type of the address.
 data ShippingAddressType =
-  ShipAddrResidential | ShipAddrBusiness | ShipAddrMailbox deriving (Show)
+  ShipAddrResidential | ShipAddrBusiness | ShipAddrMailbox
+  deriving (Eq, Read, Show)
 
 instance ToJSON ShippingAddressType where
   toJSON ShipAddrResidential = "residential"
@@ -78,7 +79,7 @@ data ShippingAddress = ShippingAddress
   , shipAddrPostalCode :: Maybe String
   , shipAddrState :: Maybe String
   , shipAddrPhone :: Maybe String
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON ShippingAddress where
   toJSON addr =

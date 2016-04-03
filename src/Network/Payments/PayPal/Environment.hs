@@ -13,7 +13,7 @@ module Network.Payments.PayPal.Environment
 ) where
 
 -- |URL of a PayPal environment.
-newtype EnvironmentUrl = EnvironmentUrl String deriving (Show)
+newtype EnvironmentUrl = EnvironmentUrl String deriving (Eq, Show)
 
 -- |URL to sandbox environment.
 sandboxUrl :: EnvironmentUrl

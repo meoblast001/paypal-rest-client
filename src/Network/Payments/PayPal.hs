@@ -29,7 +29,7 @@ import Network.Payments.PayPal.Environment
 import Network.Wreq
 
 -- |HTTP method (GET/POST).
-data HttpMethod = HttpGet | HttpPost | HttpPatch deriving (Show)
+data HttpMethod = HttpGet | HttpPost | HttpPatch deriving (Eq, Read, Show)
 
 -- |HTTP method to use in the request (GET/POST).
 data UseHttpMethod = UseHttpGet | UseHttpPost Payload | UseHttpPatch Payload

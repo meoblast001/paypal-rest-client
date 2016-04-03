@@ -24,7 +24,7 @@ import Network.Payments.PayPal.Types.FundingInstrument
 -- |Optional additional information about the payer.
 data PayerInfo = PayerInfo
   { payerInfoEmail :: String
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON PayerInfo where
   toJSON info = object ["email" .= payerInfoEmail info]
@@ -34,7 +34,8 @@ instance FromJSON PayerInfo where
   parseJSON _ = mzero
 
 -- |Method of payment.
-data PaymentMethod = PayMethodPayPal | PayMethodCreditCard deriving (Show)
+data PaymentMethod = PayMethodPayPal | PayMethodCreditCard
+  deriving (Eq, Read, Show)
 
 instance ToJSON PaymentMethod where
   toJSON PayMethodPayPal = "paypal"
@@ -46,7 +47,8 @@ instance FromJSON PaymentMethod where
   parseJSON _ = mzero
 
 -- |Account verification status of the payer.
-data PayerStatus = PayerStatusVerified | PayerStatusUnverified deriving (Show)
+data PayerStatus = PayerStatusVerified | PayerStatusUnverified
+  deriving (Eq, Read, Show)
 
 instance FromJSON PayerStatus where
   parseJSON (String "VERIFIED") = return PayerStatusVerified
@@ -63,7 +65,7 @@ data Payer = Payer
   , payerFundingInstruments :: [FundingInstrument]
   , payerInfo :: Maybe PayerInfo
   , payerStatus :: Maybe PayerStatus
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON Payer where
   toJSON payer =

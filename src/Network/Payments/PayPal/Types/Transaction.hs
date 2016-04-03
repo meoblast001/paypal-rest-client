@@ -29,7 +29,7 @@ data Details = Details
   { detailsShipping :: String
   , detailsSubtotal :: String
   , detailsTax :: String
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON Details where
   toJSON details =
@@ -51,7 +51,7 @@ data Amount = Amount
   { amountCurrency :: Currency
   , amountTotal :: String
   , amountDetails :: Details
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON Amount where
   toJSON amt =
@@ -75,7 +75,7 @@ data Item = Item
   , itemCurrency :: String
   , itemSku :: String
   , itemDescription :: Maybe String
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON Item where
   toJSON item =
@@ -101,7 +101,7 @@ instance FromJSON Item where
 data ItemList = ItemList
   { itemListItems :: [Item]
   , itemListShippingAddress :: Maybe ShippingAddress
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON ItemList where
   toJSON list =
@@ -121,7 +121,7 @@ data Transaction = Transaction
   { transactAmount :: Amount
   , transactDescription :: Maybe String
   , transactItemList :: ItemList
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance ToJSON Transaction where
   toJSON trans =

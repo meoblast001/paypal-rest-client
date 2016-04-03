@@ -21,7 +21,7 @@ data HateoasLink = HateoasLink
   { hateoasHref :: URL
   , hateoasRel :: String
   , hateoasMethod :: Either HttpMethod String
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 instance FromJSON HateoasLink where
   parseJSON (Object obj) =

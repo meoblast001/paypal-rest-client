@@ -46,7 +46,7 @@ data AccessToken = AccessToken
   , aTokenType  :: String
   , aTokenAppId :: String
   , aTokenExpires :: Seconds
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 -- |An access token from OAuth together with its UTC expiration time.
 type AccessTokenWithExpiration = (AccessToken, UTCTime)
