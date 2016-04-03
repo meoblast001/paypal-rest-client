@@ -1,4 +1,4 @@
-name: paypal-client
+name: paypal-rest-client
 version: 0.1.0
 synopsis: A client to connect to PayPal's REST API (v1)
 license: MIT
@@ -14,10 +14,10 @@ library
       Network.Payments.PayPal
     , Network.Payments.PayPal.Environment
     , Network.Payments.PayPal.Auth
-    , Network.Payments.PayPal.Hateoas
     , Network.Payments.PayPal.Payments
     , Network.Payments.PayPal.Types.Address
     , Network.Payments.PayPal.Types.FundingInstrument
+    , Network.Payments.PayPal.Types.Hateoas
     , Network.Payments.PayPal.Types.Paging
     , Network.Payments.PayPal.Types.Payer
     , Network.Payments.PayPal.Types.Transaction

@@ -13,6 +13,7 @@ module Network.Payments.PayPal.Payments
 , PaymentID
 , Intent(..)
 , RedirectUrls(..)
+, ReturnLinkParams(..)
 , CreateRequest(..)
 , CreateResponse(..)
 , ExecuteRequest(..)
@@ -23,6 +24,7 @@ module Network.Payments.PayPal.Payments
 , executePayment
 , findPaymentById
 , listPayments
+, returnLinkParams
 ) where
 
 import Control.Monad
