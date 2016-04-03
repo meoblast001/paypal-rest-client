@@ -28,6 +28,9 @@ module Network.Payments.PayPal.Payments
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.Map as M
 import Data.Maybe
 import Data.Time.Clock
 import Data.Time.Format
@@ -77,6 +80,13 @@ instance FromJSON RedirectUrls where
     obj .: "cancel_url"
   parseJSON _ = mzero
 
+data ReturnLinkParams = ReturnLinkParams
+  { retLinkParamPayId :: PaymentID
+  , retLinkParamToken :: String
+  , retLinkParamPayerId :: String
+  } deriving (Show)
+
+-- |Current status of the PayPal payment.
 data PaymentState = PayStateCreated | PayStateApproved | PayStateFailed |
                     PayStateCancelled | PayStateExpired | PayStatePending
                     deriving (Show)
@@ -243,6 +253,17 @@ listPayments pagingRequest =
   let url = "/v1/payments/payment/" ++
             (maybe mempty (\req -> "?" ++ pagingReqToQuery req) pagingRequest)
   in PayPalOperation UseHttpGet url defaults
+
+-- |Use this function to parse GET parameters passed from PayPal to the return
+-- URL. Takes a map of query parameters (name to value) and returns a structure
+-- containing these parameters if possible. Otherwise PayPal didn't give you
+-- required data.
+returnLinkParams :: M.Map BS.ByteString BS.ByteString -> Maybe ReturnLinkParams
+returnLinkParams query = do
+  paymentId <- BS8.unpack <$> M.lookup "paymentId" query
+  token <- BS8.unpack <$> M.lookup "token" query
+  payerId <- BS8.unpack <$> M.lookup "PayerID" query
+  return $ ReturnLinkParams paymentId token payerId
 
 -- Parses a time in ISO 8106 format to a UTCTime.
 parseTimeIso8106 :: String -> Parser UTCTime

@@ -38,6 +38,7 @@ data UseHttpMethod = UseHttpGet | UseHttpPost Payload | UseHttpPatch Payload
 instance Show UseHttpMethod where
   show UseHttpGet = "HttpGet"
   show (UseHttpPost _) = "HttpPost"
+  show (UseHttpPatch _) = "HttpPatch"
 
 -- |A monad composing multiple PayPal operations which are to be performed.
 -- The result can be executed using the execPayPal function.

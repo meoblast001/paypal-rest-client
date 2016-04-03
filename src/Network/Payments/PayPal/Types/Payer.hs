@@ -67,10 +67,12 @@ data Payer = Payer
 
 instance ToJSON Payer where
   toJSON payer =
-    object (["payment_method" .= payerPaymentMethod payer,
-             "funding_instruments" .= payerFundingInstruments payer] ++
-            maybeToList (("payer_info" .=) <$> payerInfo payer) ++
-            maybeToList (("status" .=) <$> payerStatus payer))
+    let fundingInstr = if null $ payerFundingInstruments payer then Nothing
+                       else Just $ payerFundingInstruments payer
+    in object (["payment_method" .= payerPaymentMethod payer] ++
+               maybeToList (("funding_instruments" .=) <$> fundingInstr) ++
+               maybeToList (("payer_info" .=) <$> payerInfo payer) ++
+               maybeToList (("status" .=) <$> payerStatus payer))
 
 instance FromJSON Payer where
   parseJSON (Object obj) =
