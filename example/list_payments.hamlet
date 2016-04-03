@@ -1,0 +1,29 @@
+<style type="text/css">
+  table {
+    border-collapse: collapse;
+  }
+
+  table td, table th {
+    border: solid 1px #000000;
+  }
+
+<h3>Payments
+<table>
+  <thead>
+    <th>Payment ID
+    <th>Intent
+    <th>Create Time
+    <th>Update Time
+    <th>State
+  <tbody>
+    $forall payment <- payments
+      <tr>
+        <td>#{createResPayId payment}
+        <td>#{show $ createResIntent payment}
+        <td>#{formatTime defaultTimeLocale "%Y %T" $ createResCreateTime payment}
+        <td>
+          $maybe updateTime <- createResUpdateTime payment
+            #{formatTime defaultTimeLocale "%Y %T" updateTime}
+          $nothing
+            None
+        <td>#{show $ createResPayState payment}
