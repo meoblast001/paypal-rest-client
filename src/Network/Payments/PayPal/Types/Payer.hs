@@ -11,6 +11,7 @@
 module Network.Payments.PayPal.Types.Payer
 ( PayerInfo(..)
 , PaymentMethod(..)
+, PayerStatus(..)
 , Payer(..)
 ) where
 
@@ -44,23 +45,38 @@ instance FromJSON PaymentMethod where
   parseJSON (String "credit_card") = return PayMethodCreditCard
   parseJSON _ = mzero
 
+-- |Account verification status of the payer.
+data PayerStatus = PayerStatusVerified | PayerStatusUnverified deriving (Show)
+
+instance FromJSON PayerStatus where
+  parseJSON (String "VERIFIED") = return PayerStatusVerified
+  parseJSON (String "UNVERIFIED") = return PayerStatusUnverified
+  parseJSON _ = mzero
+
+instance ToJSON PayerStatus where
+  toJSON PayerStatusVerified = "VERIFIED"
+  toJSON PayerStatusUnverified = "UNVERIFIED"
+
 -- |Information about the payer in a transaction.
 data Payer = Payer
   { payerPaymentMethod :: PaymentMethod
   , payerFundingInstruments :: [FundingInstrument]
   , payerInfo :: Maybe PayerInfo
+  , payerStatus :: Maybe PayerStatus
   } deriving (Show)
 
 instance ToJSON Payer where
   toJSON payer =
     object (["payment_method" .= payerPaymentMethod payer,
              "funding_instruments" .= payerFundingInstruments payer] ++
-            maybeToList (("payer_info" .=) <$> payerInfo payer))
+            maybeToList (("payer_info" .=) <$> payerInfo payer) ++
+            maybeToList (("status" .=) <$> payerStatus payer))
 
 instance FromJSON Payer where
   parseJSON (Object obj) =
     Payer <$>
     obj .: "payment_method" <*>
     (obj .:? "funding_instruments" >>= return . F.concat) <*>
-    obj .:? "payer_info"
+    obj .:? "payer_info" <*>
+    obj .:? "status"
   parseJSON _ = mzero
