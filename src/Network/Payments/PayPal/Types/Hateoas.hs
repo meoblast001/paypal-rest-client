@@ -1,5 +1,5 @@
 -- |
--- Module: Network.Payments.PayPal.Hateoas
+-- Module: Network.Payments.PayPal.Types.Hateoas
 -- Copyright: (C) 2016 Braden Walters
 -- License: MIT (see LICENSE file)
 -- Maintainer: Braden Walters <vc@braden-walters.info>
@@ -8,7 +8,7 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.Payments.PayPal.Hateoas (HateoasLink(..)) where
+module Network.Payments.PayPal.Types.Hateoas (HateoasLink(..)) where
 
 import Control.Monad
 import qualified Data.Text as T

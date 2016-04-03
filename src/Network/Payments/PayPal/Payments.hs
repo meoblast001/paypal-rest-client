@@ -36,7 +36,7 @@ import Data.Time.Clock
 import Data.Time.Format
 import qualified Network.HTTP.Client as HTTP
 import Network.Payments.PayPal
-import Network.Payments.PayPal.Hateoas
+import Network.Payments.PayPal.Types.Hateoas
 import Network.Payments.PayPal.Types.Paging
 import Network.Payments.PayPal.Types.Payer
 import Network.Payments.PayPal.Types.Transaction
