@@ -26,9 +26,9 @@ import Network.Payments.PayPal.Types.Currency
 
 -- |Details about the amount of a transaction.
 data Details = Details
-  { detailsShipping :: String
-  , detailsSubtotal :: String
-  , detailsTax :: String
+  { detailsShipping :: MonetaryAmount
+  , detailsSubtotal :: MonetaryAmount
+  , detailsTax :: MonetaryAmount
   } deriving (Eq, Show)
 
 instance ToJSON Details where
@@ -71,7 +71,7 @@ instance FromJSON Amount where
 data Item = Item
   { itemQuantity :: Integer
   , itemName :: String
-  , itemPrice :: String
+  , itemPrice :: MonetaryAmount
   , itemCurrency :: String
   , itemSku :: String
   , itemDescription :: Maybe String
