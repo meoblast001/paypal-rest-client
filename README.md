@@ -31,8 +31,8 @@ monad and get your results like so
 
     main :: IO ()
     main = do
-      payPalResult <- execOperations sandboxUrl Config.clientId Config.secret
-                                     myOperations
+      payPalResult <- execPayPal sandboxUrl Config.clientId Config.secret
+                                 myOperations
       case payPalResult of
         Left err -> show err
         Right (newId, allIds) -> do
