@@ -14,30 +14,34 @@ action is executed, the token is first renewed.
 Suppose you need to create a new payment, then get that payment ID back as well
 as a list of all payment IDs. You could write this:
 
-    import Network.Payments.PayPal
-    import Network.Payments.PayPal.Payments
+```haskell
+import Network.Payments.PayPal
+import Network.Payments.PayPal.Payments
 
-    myOperations :: PayPalOperations (PaymentID, [PaymentID])
-    myOperations = do
-      cRes <- createPayment $ CreateResponse ...
-      lRes <- listPayments Nothing
-      return (createResPayId cRes, map createResPayId $ listResPayments lRes)
+myOperations :: PayPalOperations (PaymentID, [PaymentID])
+myOperations = do
+  cRes <- createPayment $ CreateResponse ...
+  lRes <- listPayments Nothing
+  return (createResPayId cRes, map createResPayId $ listResPayments lRes)
+```
 
 Then, given you have a `Config` module with the credentials, you can execute the
 monad and get your results like so
 
-    import Config
-    import Network.Payments.PayPal
+```haskell
+import Config
+import Network.Payments.PayPal
 
-    main :: IO ()
-    main = do
-      payPalResult <- execPayPal sandboxUrl Config.clientId Config.secret
-                                 myOperations
-      case payPalResult of
-        Left err -> show err
-        Right (newId, allIds) -> do
-          putStrLn ("The new ID is: " ++ show newId)
-          putStrLn ("All IDs are: " ++ show allIds)
+main :: IO ()
+main = do
+  payPalResult <- execPayPal sandboxUrl Config.clientId Config.secret
+                             myOperations
+  case payPalResult of
+    Left err -> show err
+    Right (newId, allIds) -> do
+      putStrLn ("The new ID is: " ++ show newId)
+      putStrLn ("All IDs are: " ++ show allIds)
+```
 
 The monad does not need to take error handling into account. If an error occurs,
 the monad receives a short circuit and the rest of the code is not executed. The
