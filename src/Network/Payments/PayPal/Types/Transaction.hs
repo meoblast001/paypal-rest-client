@@ -49,7 +49,7 @@ instance FromJSON Details where
 -- total or the request is rejected.
 data Amount = Amount
   { amountCurrency :: Currency
-  , amountTotal :: String
+  , amountTotal :: MonetaryAmount
   , amountDetails :: Details
   } deriving (Eq, Show)
 
@@ -72,7 +72,7 @@ data Item = Item
   { itemQuantity :: Integer
   , itemName :: String
   , itemPrice :: MonetaryAmount
-  , itemCurrency :: String
+  , itemCurrency :: Currency
   , itemSku :: String
   , itemDescription :: Maybe String
   } deriving (Eq, Show)

@@ -14,6 +14,9 @@ module Network.Payments.PayPal
 ( HttpMethod(..)
 , UseHttpMethod(..)
 , PayPalOperations(..)
+, JSONText
+, ErrorMessage
+, PayPalError(..)
 , execPayPal
 ) where
 
@@ -66,7 +69,8 @@ type JSONText = LBS.ByteString
 type ErrorMessage = String
 
 data PayPalError = NoAccessToken | ResponseParseError ErrorMessage JSONText |
-                   HttpError HTTPClient.HttpException deriving (Show)
+                   HttpError HTTPClient.HttpException | OtherError String
+                   deriving (Show)
 
 -- |Authenticate with PayPal and then interact with the service.
 execPayPal :: FromJSON a => EnvironmentUrl -> ClientID -> Secret ->
