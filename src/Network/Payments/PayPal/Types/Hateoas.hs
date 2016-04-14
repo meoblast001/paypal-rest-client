@@ -8,19 +8,25 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.Payments.PayPal.Types.Hateoas (HateoasLink(..)) where
+module Network.Payments.PayPal.Types.Hateoas
+( HateoasMethod(..)
+, HateoasLink(..)
+) where
 
 import Control.Monad
 import qualified Data.Text as T
 import Data.Aeson
-import Network.Payments.PayPal
 
 type URL = String
+
+-- |HATEOAS method.
+data HateoasMethod = HateoasGet | HateoasPost | HateoasPatch | HateoasRedirect |
+                     HateoasOther String deriving (Eq, Read, Show)
 
 data HateoasLink = HateoasLink
   { hateoasHref :: URL
   , hateoasRel :: String
-  , hateoasMethod :: Either HttpMethod String
+  , hateoasMethod :: HateoasMethod
   } deriving (Eq, Show)
 
 instance FromJSON HateoasLink where
@@ -30,8 +36,10 @@ instance FromJSON HateoasLink where
     obj .: "rel" <*>
     ((obj .: "method") >>= parseHttpMethod)
     where
-      parseHttpMethod (String "GET") = return $ Left HttpGet
-      parseHttpMethod (String "POST") = return $ Left HttpPost
-      parseHttpMethod (String other) = return $ Right $ T.unpack other
+      parseHttpMethod (String "GET") = return HateoasGet
+      parseHttpMethod (String "POST") = return HateoasPost
+      parseHttpMethod (String "PATCH") = return HateoasPatch
+      parseHttpMethod (String "REDIRECT") = return HateoasRedirect
+      parseHttpMethod (String other) = return $ HateoasOther $ T.unpack other
       parseHttpMethod _ = mzero
   parseJSON _ = mzero

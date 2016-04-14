@@ -11,8 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Payments.PayPal
-( HttpMethod(..)
-, UseHttpMethod(..)
+( UseHttpMethod(..)
 , PayPalOperations(..)
 , JSONText
 , ErrorMessage
@@ -30,9 +29,6 @@ import qualified Network.HTTP.Client as HTTPClient
 import Network.Payments.PayPal.Auth
 import Network.Payments.PayPal.Environment
 import Network.Wreq
-
--- |HTTP method (GET/POST).
-data HttpMethod = HttpGet | HttpPost | HttpPatch deriving (Eq, Read, Show)
 
 -- |HTTP method to use in the request (GET/POST).
 data UseHttpMethod = UseHttpGet | UseHttpPost Payload | UseHttpPatch Payload

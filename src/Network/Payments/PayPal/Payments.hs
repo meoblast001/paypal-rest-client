@@ -21,6 +21,7 @@ module Network.Payments.PayPal.Payments
 , FindResponse(..)
 , ListResponse(..)
 , createPayment
+, approvalUrlFromCreate
 , executePayment
 , findPaymentById
 , listPayments
@@ -233,6 +234,16 @@ createPayment request =
       content = encode request
       payload = WTypes.Raw contentType $ HTTP.RequestBodyLBS content
   in PayPalOperation (UseHttpPost payload) url defaults
+
+-- |Extracts an approval URL, if there is one, from a create response
+approvalUrlFromCreate :: CreateResponse -> Maybe URL
+approvalUrlFromCreate response =
+  let criteriaFunction hateoas =
+        hateoasRel hateoas == "approval_url" &&
+        hateoasMethod hateoas == HateoasRedirect
+      maybeHateoas =
+        listToMaybe $ filter criteriaFunction $ createResHateoasLinks response
+  in hateoasHref <$> maybeHateoas
 
 -- |Execute (or complete) a payment that has been approved by the payer.
 executePayment :: PaymentID -> ExecuteRequest ->
