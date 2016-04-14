@@ -37,7 +37,7 @@ instance FromJSON Currency where
 -- encoded to and decoded from JSON. Encodes to a string, decodes from string or
 -- number.
 newtype MonetaryAmount = MonetaryAmount Decimal
-  deriving (Eq, Num, Ord, Read, Real, Show)
+  deriving (Eq, Fractional, Num, Ord, Read, Real, RealFrac, Show)
 
 instance ToJSON MonetaryAmount where
   toJSON (MonetaryAmount value) = String $ T.pack $ show $ roundTo 2 value
