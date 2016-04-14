@@ -71,7 +71,11 @@ getNewPaymentR = do
       case createResult of
         Left err -> defaultLayout [whamlet|Error: #{show err}|]
         Right result ->
-          defaultLayout [whamlet|Created Payment: #{createResPayId result}|]
+          case approvalUrlFromCreate result of
+            Just url ->
+              redirect url
+            Nothing ->
+              defaultLayout [whamlet|Created Payment: #{createResPayId result}|]
     _ -> defaultLayout $(whamletFile "new_payment.hamlet")
 
 postNewPaymentR :: Handler Html
