@@ -34,7 +34,8 @@ mkYesod "Example" [parseRoutes|
 /payments/success PaymentSuccessR GET
 |]
 
-instance Yesod Example
+instance Yesod Example where
+  approot = ApprootStatic "http://localhost:3000"
 
 instance RenderMessage Example FormMessage where
   renderMessage _ _ = defaultFormMessage
