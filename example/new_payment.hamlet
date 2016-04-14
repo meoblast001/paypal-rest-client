@@ -1,0 +1,15 @@
+<style type="text/css">
+  form {
+    border: solid 1px #000000;
+    margin-bottom: 5px;
+    padding: 10px;
+  }
+
+<h3>New Payment
+<form action="@{NewPaymentR}" method="POST" enctype="#{ppEncType}">
+  <h6>PayPal to PayPal
+  ^{ppForm}
+  <input type="submit" value="Create">
+<form action="@{NewPaymentR}" method="POST">
+  <h6>Credit Card to PayPal
+  <input type="submit" value="Create">

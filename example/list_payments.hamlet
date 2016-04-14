@@ -8,6 +8,7 @@
   }
 
 <h3>Payments
+[<a href="@{NewPaymentR}">Create New Payment</a>]
 <table>
   <thead>
     <th>Payment ID
@@ -20,10 +21,10 @@
       <tr>
         <td>#{createResPayId payment}
         <td>#{show $ createResIntent payment}
-        <td>#{formatTime defaultTimeLocale "%Y %T" $ createResCreateTime payment}
+        <td>#{formatTime defaultTimeLocale "%F %T" $ createResCreateTime payment}
         <td>
           $maybe updateTime <- createResUpdateTime payment
-            #{formatTime defaultTimeLocale "%Y %T" updateTime}
+            #{formatTime defaultTimeLocale "%F %T" updateTime}
           $nothing
             None
         <td>#{show $ createResPayState payment}
