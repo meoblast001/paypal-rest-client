@@ -3,6 +3,9 @@
 This library allows you to connect with PayPal's
 [REST API V1](https://developer.paypal.com/docs/api/) through Haskell.
 
+#### Build Status
+[![Build Status](https://travis-ci.org/meoblast001/paypal-rest-client.svg?branch=master)](https://travis-ci.org/meoblast001/paypal-rest-client)
+
 ###### The PayPal Monad and Session
 
 PayPal's API uses OAuth 2 and therefore provides access tokens which expire.
