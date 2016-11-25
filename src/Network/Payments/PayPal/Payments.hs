@@ -39,6 +39,9 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map as M
 import Data.Maybe
+#if __GLASGOW_HASKELL__ < 710
+import Data.Monoid
+#endif
 import Data.Time.Clock
 import Data.Time.Format
 import qualified Network.HTTP.Client as HTTP
