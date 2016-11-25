@@ -6,6 +6,7 @@
 -- Stability: experimental
 -- Portability: ghc
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Payments.PayPal.Auth
@@ -19,6 +20,9 @@ module Network.Payments.PayPal.Auth
 , safeExpirationTime
 ) where
 
+#if __GLASGOW_HASKELL__ < 710
+import Control.Applicative
+#endif
 import Control.Lens
 import Control.Monad
 import Data.Aeson

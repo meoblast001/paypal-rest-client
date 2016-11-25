@@ -6,6 +6,7 @@
 -- Stability: experimental
 -- Portability: ghc
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Payments.PayPal.Types.Hateoas
@@ -13,6 +14,9 @@ module Network.Payments.PayPal.Types.Hateoas
 , HateoasLink(..)
 ) where
 
+#if __GLASGOW_HASKELL__ < 710
+import Control.Applicative
+#endif
 import Control.Monad
 import qualified Data.Text as T
 import Data.Aeson

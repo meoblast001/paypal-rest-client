@@ -6,6 +6,7 @@
 -- Stability: experimental
 -- Portability: ghc
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Payments.PayPal.Types.FundingInstrument
@@ -14,6 +15,9 @@ module Network.Payments.PayPal.Types.FundingInstrument
 , FundingInstrument(..)
 ) where
 
+#if __GLASGOW_HASKELL__ < 710
+import Control.Applicative
+#endif
 import Control.Monad
 import Data.Aeson
 import Data.Maybe

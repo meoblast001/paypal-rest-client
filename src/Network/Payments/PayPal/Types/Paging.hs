@@ -6,6 +6,7 @@
 -- Stability: experimental
 -- Portability: ghc
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Payments.PayPal.Types.Paging
@@ -17,6 +18,9 @@ module Network.Payments.PayPal.Types.Paging
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
+#if __GLASGOW_HASKELL__ < 710
+import Data.Functor
+#endif
 import Data.Time.Clock
 import Data.Time.Format
 import Network.HTTP.Types.URI

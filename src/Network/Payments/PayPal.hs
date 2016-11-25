@@ -6,6 +6,7 @@
 -- Stability: experimental
 -- Portability: ghc
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -19,6 +20,9 @@ module Network.Payments.PayPal
 , execPayPal
 ) where
 
+#if __GLASGOW_HASKELL__ < 710
+import Control.Applicative
+#endif
 import Control.Exception
 import Control.Lens
 import Data.Aeson
