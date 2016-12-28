@@ -114,16 +114,14 @@ execOpers env@(EnvironmentUrl baseUrl) username password
       let accToken = aToken accessToken
           opts = preOptions &
                  header "Authorization" .~ [BS8.pack ("Bearer " ++ accToken)]
-          responseIO = case method of
-            UseHttpGet -> getWith opts (baseUrl ++ url)
-            UseHttpPost payload -> postWith opts (baseUrl ++ url) payload
-            UseHttpPatch payload ->
-              customPayloadMethodWith "PATCH" opts (baseUrl ++ url) payload
-      responseOrErr <- (Right <$> responseIO) `catch`
-                       (\e -> return $ Left e)
+      responseOrErr <- try $ case method of
+        UseHttpGet -> getWith opts (baseUrl ++ url)
+        UseHttpPost payload -> postWith opts (baseUrl ++ url) payload
+        UseHttpPatch payload ->
+          customPayloadMethodWith "PATCH" opts (baseUrl ++ url) payload
       case responseOrErr of
         -- HTTP request failed.
-        Left err -> return $ Left (HttpError err)
+        Left err -> return $ Left $ HttpError err
         -- HTTP request successful.
         Right response -> do
           let responseText = response ^. responseBody

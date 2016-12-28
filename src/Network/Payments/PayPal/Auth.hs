@@ -23,10 +23,12 @@ module Network.Payments.PayPal.Auth
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
 #endif
+import Control.Exception
 import Control.Lens
 import Control.Monad
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import Data.Time.Clock
 import qualified Network.HTTP.Client as HTTP
@@ -77,13 +79,17 @@ fetchAccessToken (EnvironmentUrl url) username password = do
       contentType = "application/x-www-form-urlencoded"
       content = "grant_type=client_credentials"
       payload = WTypes.Raw contentType $ HTTP.RequestBodyBS content
-  response <- postWith options' fullUrl payload
-  if response ^. responseStatus . statusCode == 200 then
-    let body = response ^. responseBody
-        accessToken = decode body
-    in return accessToken
-  else
-    return Nothing
+  responseOrErr <- (try $ postWith options' fullUrl payload) ::
+                   IO (Either HTTP.HttpException (Response LBS.ByteString))
+  case responseOrErr of
+    Left _ -> return Nothing
+    Right response ->
+      if response ^. responseStatus . statusCode == 200 then
+        let body = response ^. responseBody
+            accessToken = decode body
+        in return accessToken
+      else
+        return Nothing
 
 fetchAccessTokenWithExpiration :: EnvironmentUrl -> ClientID -> Secret ->
                                   IO (Maybe AccessTokenWithExpiration)
