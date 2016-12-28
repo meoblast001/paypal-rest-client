@@ -74,7 +74,7 @@ instance FromJSON ShippingAddressType where
 
 -- |The payer's shipping address.
 data ShippingAddress = ShippingAddress
-  { shipAddrRecipientName :: String
+  { shipAddrRecipientName :: Maybe String
   , shipAddrType :: Maybe ShippingAddressType
   , shipAddrLine1 :: String
   , shipAddrLine2 :: Maybe String
@@ -87,8 +87,9 @@ data ShippingAddress = ShippingAddress
 
 instance ToJSON ShippingAddress where
   toJSON addr =
-    object (["recipient_name" .= shipAddrRecipientName addr,
-             "line1" .= shipAddrLine1 addr,
+    object (maybeToList (("recipient_name" .=) <$>
+                         shipAddrRecipientName addr) ++
+            ["line1" .= shipAddrLine1 addr,
              "city" .= shipAddrCity addr,
              "country_code" .= toText (shipAddrCountryCode addr)] ++
             maybeToList (("type" .=) <$> shipAddrType addr) ++
@@ -100,7 +101,7 @@ instance ToJSON ShippingAddress where
 instance FromJSON ShippingAddress where
   parseJSON (Object obj) =
     ShippingAddress <$>
-    obj .: "recipient_name" <*>
+    obj .:? "recipient_name" <*>
     obj .:? "type" <*>
     obj .: "line1" <*>
     obj .:? "line2" <*>
