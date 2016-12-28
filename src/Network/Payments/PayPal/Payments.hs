@@ -172,8 +172,10 @@ data ExecuteRequest = ExecuteRequest
 
 instance ToJSON ExecuteRequest where
   toJSON req =
-    object ["payer_id" .= executeReqPayerId req,
-            "transactions" .= executeReqTransactions req]
+    let transactions = if length (executeReqTransactions req) > 0
+          then ["transactions" .= executeReqTransactions req]
+          else []
+    in object (["payer_id" .= executeReqPayerId req] ++ transactions)
 
 -- |Response from an execute payment request.
 data ExecuteResponse = ExecuteResponse
