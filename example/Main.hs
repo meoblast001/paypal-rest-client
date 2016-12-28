@@ -13,7 +13,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import qualified Config as Config
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.Map as M
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Read as TR
 import Data.Time.Format
 import Network.Payments.PayPal
@@ -124,7 +127,23 @@ createPaymentFormPpToRequest form urlRenderFunc = do
   return $ CreateRequest SaleIntent payer [transaction] $ Just redirectUrls
 
 getPaymentSuccessR :: Handler Html
-getPaymentSuccessR = defaultLayout [whamlet|Payment successful!|]
+getPaymentSuccessR = do
+  getParams <- reqGetParams <$> getRequest
+  let getParamsBS = M.fromList $
+                    map (\(a, b) -> (TE.encodeUtf8 a, TE.encodeUtf8 b))
+                        getParams
+      returnParams = returnLinkParams getParamsBS
+  case returnParams of
+    Just (ReturnLinkParams payId _ payerId) -> do
+      executeResult <- liftIO $
+        execPayPal sandboxUrl Config.clientId Config.secret $
+                   executePayment payId (ExecuteRequest payerId [])
+      case executeResult of
+        Left err -> defaultLayout [whamlet|Error: #{show err}|]
+        Right result ->
+          defaultLayout [whamlet|#{show $ executeResHateoasLinks result}|]
+    Nothing ->
+      defaultLayout [whamlet|Could not parse return link params.|]
 
 eitherToMaybe :: Either a b -> Maybe b
 eitherToMaybe (Left _) = Nothing
