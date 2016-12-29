@@ -61,7 +61,7 @@ type AccessTokenWithExpiration = (AccessToken, UTCTime)
 
 -- |Error while fetching access token.
 data AccessTokenError = AccessTokenHttpError HTTP.HttpException |
-                        AccessTokenStatusError |
+                        AccessTokenStatusError Int |
                         -- Contains error message and JSON text.
                         AccessTokenParseError String LBS.ByteString
 
@@ -99,13 +99,14 @@ fetchAccessToken (EnvironmentUrl url) username password = do
   case responseOrErr of
     Left err -> return $ Left $ AccessTokenHttpError err
     Right response ->
-      if response ^. responseStatus . statusCode == 200 then
+      let statusCode' = response ^. responseStatus . statusCode
+      in if statusCode' == 200 then
         let responseText = response ^. responseBody
         in return $ case eitherDecode responseText of
              Left errMsg -> Left $ AccessTokenParseError errMsg responseText
              Right result -> Right result
       else
-        return $ Left AccessTokenStatusError
+        return $ Left $ AccessTokenStatusError statusCode'
 
 -- |Use a PayPal environment and login credentials to get an OAuth access token
 -- with an expiration time.

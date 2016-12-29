@@ -68,7 +68,8 @@ instance Monad PayPalOperations where
 type JSONText = LBS.ByteString
 type ErrorMessage = String
 
-data PayPalError = NoAccessToken | ResponseParseError ErrorMessage JSONText |
+data PayPalError = HttpStatusError Int |
+                   ResponseParseError ErrorMessage JSONText |
                    HttpError HTTPClient.HttpException | OtherError String
                    deriving (Show)
 
@@ -80,7 +81,8 @@ execPayPal envUrl username password operations = do
   case accessTokenOrErr of
     -- Failure to fetch access token.
     Left (AccessTokenHttpError httpErr) -> return $ Left $ HttpError httpErr
-    Left AccessTokenStatusError -> return $ Left NoAccessToken
+    Left (AccessTokenStatusError statusCode') ->
+      return $ Left $ HttpStatusError statusCode'
     Left (AccessTokenParseError errMsg text) ->
       return $ Left $ ResponseParseError errMsg text
     -- Successfully acquired, execute operations.
@@ -114,7 +116,8 @@ execOpers env@(EnvironmentUrl baseUrl) username password
   case latestAccTkOrErr of
     -- Failure to refresh access token.
     Left (AccessTokenHttpError httpErr) -> return $ Left $ HttpError httpErr
-    Left AccessTokenStatusError -> return $ Left NoAccessToken
+    Left (AccessTokenStatusError statusCode') ->
+      return $ Left $ HttpStatusError statusCode'
     Left (AccessTokenParseError errMsg text) ->
       return $ Left $ ResponseParseError errMsg text
     -- Either existing access token is still valid or new access token was
@@ -134,8 +137,12 @@ execOpers env@(EnvironmentUrl baseUrl) username password
         Left err -> return $ Left $ HttpError err
         -- HTTP request successful.
         Right response -> do
-          let responseText = response ^. responseBody
-          case eitherDecode responseText of
-            Left errMsg ->
-              return $ Left $ ResponseParseError errMsg responseText
-            Right result -> return $ Right (result, latestAccTk)
+          let statusCode' = response ^. responseStatus . statusCode
+          if statusCode' == 200 then
+            let responseText = response ^. responseBody
+            in case eitherDecode responseText of
+              Left errMsg ->
+                return $ Left $ ResponseParseError errMsg responseText
+              Right result -> return $ Right (result, latestAccTk)
+          else
+            return $ Left $ HttpStatusError statusCode'
