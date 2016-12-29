@@ -18,6 +18,7 @@ module Network.Payments.PayPal
 , ErrorMessage
 , PayPalError(..)
 , execPayPal
+, execPayPalOpers
 ) where
 
 #if __GLASGOW_HASKELL__ < 710
@@ -87,7 +88,8 @@ execPayPal envUrl username password operations = do
       return $ Left $ ResponseParseError errMsg text
     -- Successfully acquired, execute operations.
     Right accTokenWithEx -> do
-      result <- execOpers envUrl username password accTokenWithEx operations
+      result <- execPayPalOpers envUrl username password accTokenWithEx
+                                operations
       case result of
         Left err -> return $ Left err
         Right (result', _) -> return $ Right result'
@@ -95,17 +97,18 @@ execPayPal envUrl username password operations = do
 -- |Executes a PayPalOperations monad as IO. Because the access token can
 -- expire and needs to be renewed, this function returns the desired value and
 -- the most current access token when successful.
-execOpers :: EnvironmentUrl -> ClientID -> Secret ->
-             AccessTokenWithExpiration -> PayPalOperations a ->
-             IO (Either PayPalError (a, AccessTokenWithExpiration))
-execOpers _ _ _ accTokenWithEx (PPOPure a) = return $ Right (a, accTokenWithEx)
-execOpers envUrl' username password accTokenWithEx (PPOBind m f) = do
-  treeLeftResult <- execOpers envUrl' username password accTokenWithEx m
+execPayPalOpers :: EnvironmentUrl -> ClientID -> Secret ->
+                   AccessTokenWithExpiration -> PayPalOperations a ->
+                   IO (Either PayPalError (a, AccessTokenWithExpiration))
+execPayPalOpers _ _ _ accTokenWithEx (PPOPure a) =
+  return $ Right (a, accTokenWithEx)
+execPayPalOpers envUrl' username password accTokenWithEx (PPOBind m f) = do
+  treeLeftResult <- execPayPalOpers envUrl' username password accTokenWithEx m
   either (return . Left)
-         (\(res, newAccTk) -> execOpers envUrl' username password
-                                        newAccTk $ f res)
+         (\(res, newAccTk) -> execPayPalOpers envUrl' username password
+                                              newAccTk $ f res)
          treeLeftResult
-execOpers env@(EnvironmentUrl baseUrl) username password
+execPayPalOpers env@(EnvironmentUrl baseUrl) username password
           accTokenWithEx@(accessToken, expiration)
           (PayPalOperation method url preOptions) = do
   -- Check the validity of the access token and renew it if it expired.
