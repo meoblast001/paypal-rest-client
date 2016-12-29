@@ -76,14 +76,19 @@ data PayPalError = NoAccessToken | ResponseParseError ErrorMessage JSONText |
 execPayPal :: FromJSON a => EnvironmentUrl -> ClientID -> Secret ->
               PayPalOperations a -> IO (Either PayPalError a)
 execPayPal envUrl username password operations = do
-  mayAccessToken <- fetchAccessTokenWithExpiration envUrl username password
-  case mayAccessToken of
-    Just accTokenWithEx -> do
+  accessTokenOrErr <- fetchAccessTokenWithExpiration envUrl username password
+  case accessTokenOrErr of
+    -- Failure to fetch access token.
+    Left (AccessTokenHttpError httpErr) -> return $ Left $ HttpError httpErr
+    Left AccessTokenStatusError -> return $ Left NoAccessToken
+    Left (AccessTokenParseError errMsg text) ->
+      return $ Left $ ResponseParseError errMsg text
+    -- Successfully acquired, execute operations.
+    Right accTokenWithEx -> do
       result <- execOpers envUrl username password accTokenWithEx operations
       case result of
         Left err -> return $ Left err
         Right (result', _) -> return $ Right result'
-    Nothing -> return $ Left NoAccessToken
 
 -- |Executes a PayPalOperations monad as IO. Because the access token can
 -- expire and needs to be renewed, this function returns the desired value and
@@ -103,13 +108,18 @@ execOpers env@(EnvironmentUrl baseUrl) username password
           (PayPalOperation method url preOptions) = do
   -- Check the validity of the access token and renew it if it expired.
   curTime <- getCurrentTime
-  mayLatestAccTk <- if diffUTCTime expiration curTime <= 0
-                    then fetchAccessTokenWithExpiration env username password
-                    else return $ Just accTokenWithEx
-  case mayLatestAccTk of
+  latestAccTkOrErr <- if diffUTCTime expiration curTime <= 0
+                      then fetchAccessTokenWithExpiration env username password
+                      else return $ Right accTokenWithEx
+  case latestAccTkOrErr of
+    -- Failure to refresh access token.
+    Left (AccessTokenHttpError httpErr) -> return $ Left $ HttpError httpErr
+    Left AccessTokenStatusError -> return $ Left NoAccessToken
+    Left (AccessTokenParseError errMsg text) ->
+      return $ Left $ ResponseParseError errMsg text
     -- Either existing access token is still valid or new access token was
     -- retrieved.
-    Just latestAccTk -> do
+    Right latestAccTk -> do
       -- Perform the request.
       let accToken = aToken accessToken
           opts = preOptions &
@@ -126,8 +136,6 @@ execOpers env@(EnvironmentUrl baseUrl) username password
         Right response -> do
           let responseText = response ^. responseBody
           case eitherDecode responseText of
-            Left errMsg -> return $ Left $ ResponseParseError errMsg
-                                                              responseText
+            Left errMsg ->
+              return $ Left $ ResponseParseError errMsg responseText
             Right result -> return $ Right (result, latestAccTk)
-    -- Failure to refresh access token.
-    Nothing -> return $ Left NoAccessToken

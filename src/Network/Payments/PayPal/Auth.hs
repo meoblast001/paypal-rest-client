@@ -15,6 +15,8 @@ module Network.Payments.PayPal.Auth
 , Seconds
 , AccessToken(..)
 , AccessTokenWithExpiration
+, AccessTokenError(..)
+, AccessTokenResult
 , fetchAccessToken
 , fetchAccessTokenWithExpiration
 , safeExpirationTime
@@ -57,6 +59,20 @@ data AccessToken = AccessToken
 -- |An access token from OAuth together with its UTC expiration time.
 type AccessTokenWithExpiration = (AccessToken, UTCTime)
 
+-- |Error while fetching access token.
+data AccessTokenError = AccessTokenHttpError HTTP.HttpException |
+                        AccessTokenStatusError |
+                        -- Contains error message and JSON text.
+                        AccessTokenParseError String LBS.ByteString
+
+-- |Either an access token or the error encountered while fetching it.
+type AccessTokenResult = Either AccessTokenError AccessToken
+
+-- |Either an access token with an expiration or the error encountered while
+-- fetching it
+type AccessTokenWithExpirationResult =
+  Either AccessTokenError AccessTokenWithExpiration
+
 instance FromJSON AccessToken where
   parseJSON (Object obj) =
     AccessToken <$>
@@ -68,8 +84,7 @@ instance FromJSON AccessToken where
   parseJSON _ = mzero
 
 -- |Use a PayPal environment and login credentials to get an OAuth access token.
-fetchAccessToken :: EnvironmentUrl -> ClientID -> Secret ->
-                    IO (Maybe AccessToken)
+fetchAccessToken :: EnvironmentUrl -> ClientID -> Secret -> IO AccessTokenResult
 fetchAccessToken (EnvironmentUrl url) username password = do
   let usernameBS = BS8.pack username
       passwordBS = BS8.pack password
@@ -82,22 +97,25 @@ fetchAccessToken (EnvironmentUrl url) username password = do
   responseOrErr <- (try $ postWith options' fullUrl payload) ::
                    IO (Either HTTP.HttpException (Response LBS.ByteString))
   case responseOrErr of
-    Left _ -> return Nothing
+    Left err -> return $ Left $ AccessTokenHttpError err
     Right response ->
       if response ^. responseStatus . statusCode == 200 then
-        let body = response ^. responseBody
-            accessToken = decode body
-        in return accessToken
+        let responseText = response ^. responseBody
+        in return $ case eitherDecode responseText of
+             Left errMsg -> Left $ AccessTokenParseError errMsg responseText
+             Right result -> Right result
       else
-        return Nothing
+        return $ Left AccessTokenStatusError
 
+-- |Use a PayPal environment and login credentials to get an OAuth access token
+-- with an expiration time.
 fetchAccessTokenWithExpiration :: EnvironmentUrl -> ClientID -> Secret ->
-                                  IO (Maybe AccessTokenWithExpiration)
+                                  IO AccessTokenWithExpirationResult
 fetchAccessTokenWithExpiration environment username password= do
   currentTime <- getCurrentTime
-  mayAccessToken <- fetchAccessToken environment username password
+  accessTokenOrErr <- fetchAccessToken environment username password
   let getExpire accToken = (accToken, safeExpirationTime currentTime accToken)
-  return $ maybe Nothing (Just . getExpire) mayAccessToken
+  return $ either Left (Right . getExpire) accessTokenOrErr
 
 -- |Time at which the token should be considered expired. This is a few seconds
 -- before the time that PayPal gives us. Parameters are the time at which the
