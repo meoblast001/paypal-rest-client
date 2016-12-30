@@ -15,13 +15,13 @@ require breaking changes while this library is unstable.
 
 Currently implemented API resources include:
 
-* Auth
-** OAuth 2
-* Payments
-** Create a payment
-** Execute approved PayPal payment
-** Show payment details
-** List payments
+- Auth
+  - OAuth 2
+- Payments
+  - Create a payment
+  - Execute approved PayPal payment
+  - Show payment details
+  - List payments
 
 ###### The PayPal Monad and Session
 
