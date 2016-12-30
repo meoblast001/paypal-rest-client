@@ -6,6 +6,23 @@ This library allows you to connect with PayPal's
 #### Build Status
 [![Build Status](https://travis-ci.org/meoblast001/paypal-rest-client.svg?branch=master)](https://travis-ci.org/meoblast001/paypal-rest-client)
 
+#### Warning Regarding Stability
+
+During releases under 1.0.0, please use exact version numbers as bug fixes may
+require breaking changes while this library is unstable.
+
+#### What Can It Do?
+
+Currently implemented API resources include:
+
+* Auth
+** OAuth 2
+* Payments
+** Create a payment
+** Execute approved PayPal payment
+** Show payment details
+** List payments
+
 ###### The PayPal Monad and Session
 
 PayPal's API uses OAuth 2 and therefore provides access tokens which expire.
@@ -50,8 +67,3 @@ The monad does not need to take error handling into account. If an error occurs,
 the monad receives a short circuit and the rest of the code is not executed. The
 error is simply returned to be handled. In the example, this means if
 `createPayment` fails, `listPayments` will never run.
-
-#### Warning Regarding Stability
-
-During releases under 1.0.0, please use exact version numbers as bug fixes may
-require breaking changes while this library is unstable.
