@@ -4,7 +4,8 @@ This library allows you to connect with PayPal's
 [REST API V1](https://developer.paypal.com/docs/api/) through Haskell.
 
 #### Build Status
-[![Build Status](https://travis-ci.org/meoblast001/paypal-rest-client.svg?branch=master)](https://travis-ci.org/meoblast001/paypal-rest-client)
+Master: [![Build Status](https://travis-ci.org/meoblast001/paypal-rest-client.svg?branch=master)](https://travis-ci.org/meoblast001/paypal-rest-client)
+Develop: [![Build Status](https://travis-ci.org/meoblast001/paypal-rest-client.svg?branch=develop)](https://travis-ci.org/meoblast001/paypal-rest-client)
 
 #### Warning Regarding Stability
 
@@ -22,6 +23,11 @@ Currently implemented API resources include:
   - Execute approved PayPal payment
   - Show payment details
   - List payments
+
+#### Documentation and Usage Examples
+
+Documentation can be found at
+[the page for paypal-rest-client in Hackage](http://hackage.haskell.org/package/paypal-rest-client).
 
 ###### The PayPal Monad and Session
 
