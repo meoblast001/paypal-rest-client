@@ -23,7 +23,7 @@ import Data.Aeson
 import Data.CountryCodes
 import Data.Maybe
 
--- Billing address of the payer.
+-- |Billing address of the payer.
 data Address = Address
   { addressLine1 :: String
   , addressLine2 :: Maybe String

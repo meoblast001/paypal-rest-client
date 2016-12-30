@@ -27,6 +27,7 @@ type URL = String
 data HateoasMethod = HateoasGet | HateoasPost | HateoasPatch | HateoasRedirect |
                      HateoasOther String deriving (Eq, Read, Show)
 
+-- |HATEOAS link.
 data HateoasLink = HateoasLink
   { hateoasHref :: URL
   , hateoasRel :: String
