@@ -23,7 +23,7 @@ import Network.Payments.PayPal.Payments
 
 myOperations :: PayPalOperations (PaymentID, [PaymentID])
 myOperations = do
-  cRes <- createPayment $ CreateResponse ...
+  cRes <- createPayment $ CreateRequest ...
   lRes <- listPayments Nothing
   return (createResPayId cRes, map createResPayId $ listResPayments lRes)
 ```
@@ -50,3 +50,8 @@ The monad does not need to take error handling into account. If an error occurs,
 the monad receives a short circuit and the rest of the code is not executed. The
 error is simply returned to be handled. In the example, this means if
 `createPayment` fails, `listPayments` will never run.
+
+#### Warning Regarding Stability
+
+During releases under 1.0.0, please use exact version numbers as bug fixes may
+require breaking changes while this library is unstable.
