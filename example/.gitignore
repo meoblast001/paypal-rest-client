@@ -1,5 +1,0 @@
-dist/*
-.cabal-sandbox/
-cabal.sandbox.config
-Config.hs
-client_session_key.aes
