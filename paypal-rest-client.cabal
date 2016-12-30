@@ -13,7 +13,8 @@ cabal-version: >= 1.10
 Tested-With: GHC == 7.8.4, GHC == 7.10.2, GHC == 8.0.1
 
 description:
-  Library to connect with and use PayPal's REST API v1. For documentation, see
+  Library to connect with and use PayPal's
+  <https://developer.paypal.com/docs/api/ REST API v1>. For documentation, see
   the <https://github.com/meoblast001/paypal-rest-client/blob/master/README.md README>.
   During releases under 1.0.0, please use exact version numbers as bug fixes may
   require breaking changes while this library is unstable.
