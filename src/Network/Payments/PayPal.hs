@@ -26,7 +26,7 @@ import Control.Applicative
 #endif
 import Control.Exception
 import Control.Lens
-import Data.Aeson
+import Data.Aeson hiding (Options)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time.Clock
