@@ -1,0 +1,5 @@
+resolver: nightly-2018-04-25
+packages:
+- .
+extra-deps:
+- country-codes-0.1.3
